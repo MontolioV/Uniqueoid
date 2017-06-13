@@ -14,23 +14,23 @@ public enum TestMatEnum {
     INNER2_INNER_COPY_GOOD  (new File("test_mat/inner2/inner/Firefox_wallpaper_copy_good.png"), true),
     INNER2_INNER_COPY_BAD   (new File("test_mat/inner2/inner/Firefox_wallpaper_copy_bad.png"), false);
 
-    private final String sha256CheckSum;
-    private final File file;
+    private final String SHA_256_CHECKSUM;
+    private final File FILE;
 
     TestMatEnum(File file, boolean isExactCopy) {
-        this.file = file;
+        this.FILE = file;
         if (isExactCopy) {
-            this.sha256CheckSum = "7cd376319c008f8580c0c54f09a6a76fe3465e68daaf3539f168b88cb3bb7f91";
+            this.SHA_256_CHECKSUM = "7cd376319c008f8580c0c54f09a6a76fe3465e68daaf3539f168b88cb3bb7f91";
         } else {
-            this.sha256CheckSum = "bc24bb4e2ebb6e9072787a657710905c5fc38d3044557022f2aa60076975377b";
+            this.SHA_256_CHECKSUM = "bc24bb4e2ebb6e9072787a657710905c5fc38d3044557022f2aa60076975377b";
         }
     }
 
     public String getSha256CheckSum() {
-        return sha256CheckSum;
+        return SHA_256_CHECKSUM;
     }
 
     public File getFile() {
-        return file;
+        return FILE;
     }
 }

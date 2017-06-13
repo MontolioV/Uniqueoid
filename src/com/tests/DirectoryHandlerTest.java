@@ -29,7 +29,6 @@ public class DirectoryHandlerTest {
     public void run_1Thread() throws Exception {
         DirectoryHandler dirHandler;
         dirHandler = new DirectoryHandler(new File("test_mat"), "SHA-256", queueFilesChSs, queueExMessages);
-//        dirHandler = new DirectoryHandler(new File("/boot"), "SHA-256", queueFilesChSs, queueExMessages);
         ForkJoinPool fjPool = new ForkJoinPool();
 
         fjPool.invoke(dirHandler);

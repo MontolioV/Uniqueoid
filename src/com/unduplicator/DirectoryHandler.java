@@ -1,33 +1,45 @@
 package com.unduplicator;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.StringJoiner;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ForkJoinTask;
-import java.util.concurrent.RecursiveAction;
+import java.util.*;
+import java.util.concurrent.*;
 
 /**
  * Directory Handler takes directory and puts checksums of all files recursively in storage.
  * <p>Created by MontolioV on 06.06.17.
  */
 public class DirectoryHandler extends RecursiveAction {
-    private final File directory;
-    private final CheckSumMaker checkSumMaker;
-    private final ConcurrentLinkedQueue<FileAndChecksum> queueFilesChSs;
-    private final ConcurrentLinkedQueue<String> queueExMessages;
-    private final String algorithm;
+    private final File DIRECTORY;
+    private final CheckSumMaker CHECKSUM_MAKER;
+    private final ConcurrentLinkedQueue<FileAndChecksum> QUEUE_FILE_AND_CHECKSUM;
+    private final ConcurrentLinkedQueue<String> QUEUE_EX_MESSAGES;
+    private final String HASH_ALGORITHM;
+    private ArrayList<DirectoryHandler> tasks = new ArrayList<>();
 
     public DirectoryHandler(File directory,
                             String hashAlgorithm,
-                            ConcurrentLinkedQueue<FileAndChecksum> queueFilesChSs,
+                            ConcurrentLinkedQueue<FileAndChecksum> queueProcessed,
                             ConcurrentLinkedQueue<String> queueExMessages)
     {
-        this.checkSumMaker = new CheckSumMaker(hashAlgorithm);
-        this.directory = directory;
-        this.queueFilesChSs = queueFilesChSs;
-        this.algorithm = hashAlgorithm;
-        this.queueExMessages = queueExMessages;
+        this.CHECKSUM_MAKER = new CheckSumMaker(hashAlgorithm);
+        this.DIRECTORY = directory;
+        this.QUEUE_FILE_AND_CHECKSUM = queueProcessed;
+        this.HASH_ALGORITHM = hashAlgorithm;
+        this.QUEUE_EX_MESSAGES = queueExMessages;
+    }
+
+    public DirectoryHandler(List<File> directories,
+                            String hashAlgorithm,
+                            ConcurrentLinkedQueue<FileAndChecksum> queueProcessed,
+                            ConcurrentLinkedQueue<String> queueExMessages)
+    {
+        this(directories.get(), hashAlgorithm, queueProcessed, queueExMessages);
+        for (File directory : directories) {
+            DirectoryHandler task = new DirectoryHandler(directory,
+                                                         HASH_ALGORITHM,
+                                                         QUEUE_FILE_AND_CHECKSUM,
+                                                         QUEUE_EX_MESSAGES);
+        }
     }
 
     /**
@@ -35,20 +47,21 @@ public class DirectoryHandler extends RecursiveAction {
      */
     @Override
     protected void compute() {
-        ArrayList<DirectoryHandler> tasks = new ArrayList<>();
-
-        if (directory.listFiles() == null) {
+        if (DIRECTORY.listFiles() == null) {
             throw new IllegalArgumentException("Choose a folder, not a file.");
         }
-        for (File file : directory.listFiles()) {
+        for (File file : DIRECTORY.listFiles()) {
             if (file.isDirectory()) {
-                DirectoryHandler task = new DirectoryHandler(file, algorithm, queueFilesChSs, queueExMessages);
+                DirectoryHandler task = new DirectoryHandler(file,
+                                                             HASH_ALGORITHM,
+                                                             QUEUE_FILE_AND_CHECKSUM,
+                                                             QUEUE_EX_MESSAGES);
                 task.fork();
                 tasks.add(task);
             } else {
                 try {
-                    FileAndChecksum pair = new FileAndChecksum(file, checkSumMaker.makeCheckSum(file));
-                    queueFilesChSs.offer(pair);
+                    FileAndChecksum pair = new FileAndChecksum(file, CHECKSUM_MAKER.makeCheckSum(file));
+                    QUEUE_FILE_AND_CHECKSUM.offer(pair);
                 } catch (IOException e) {
                     StringJoiner sj = new StringJoiner("\n");
                     sj.add(e.toString());
@@ -59,7 +72,7 @@ public class DirectoryHandler extends RecursiveAction {
                         causeExc = (Exception) causeExc.getCause();
                     }
 
-                    queueExMessages.offer(sj.toString());
+                    QUEUE_EX_MESSAGES.offer(sj.toString());
                 }
             }
         }

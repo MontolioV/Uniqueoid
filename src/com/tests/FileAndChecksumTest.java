@@ -17,7 +17,6 @@ public class FileAndChecksumTest {
     private FileAndChecksum pairPathDifferent;
 
     @Before
-
     public void setUp() throws Exception {
         pairControl = new FileAndChecksum(ROOT_CONTROL.getFile(), ROOT_CONTROL.getSha256CheckSum());
         pairCopyOfControl = new FileAndChecksum(ROOT_CONTROL.getFile(), ROOT_CONTROL.getSha256CheckSum());
