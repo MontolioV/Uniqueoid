@@ -28,55 +28,50 @@ public class DirectoryHandler extends RecursiveAction {
         this.QUEUE_EX_MESSAGES = queueExMessages;
     }
 
-    public DirectoryHandler(List<File> directories,
-                            String hashAlgorithm,
-                            ConcurrentLinkedQueue<FileAndChecksum> queueProcessed,
-                            ConcurrentLinkedQueue<String> queueExMessages)
-    {
-        this(directories.get(), hashAlgorithm, queueProcessed, queueExMessages);
-        for (File directory : directories) {
-            DirectoryHandler task = new DirectoryHandler(directory,
-                                                         HASH_ALGORITHM,
-                                                         QUEUE_FILE_AND_CHECKSUM,
-                                                         QUEUE_EX_MESSAGES);
-        }
-    }
-
     /**
      * The main computation performed by this task.
      */
     @Override
     protected void compute() {
         if (DIRECTORY.listFiles() == null) {
-            throw new IllegalArgumentException("Choose a folder, not a file.");
-        }
-        for (File file : DIRECTORY.listFiles()) {
-            if (file.isDirectory()) {
-                DirectoryHandler task = new DirectoryHandler(file,
-                                                             HASH_ALGORITHM,
-                                                             QUEUE_FILE_AND_CHECKSUM,
-                                                             QUEUE_EX_MESSAGES);
-                task.fork();
-                tasks.add(task);
+            if (DIRECTORY.isFile()) {
+                processFile(DIRECTORY);
             } else {
-                try {
-                    FileAndChecksum pair = new FileAndChecksum(file, CHECKSUM_MAKER.makeCheckSum(file));
-                    QUEUE_FILE_AND_CHECKSUM.offer(pair);
-                } catch (IOException e) {
-                    StringJoiner sj = new StringJoiner("\n");
-                    sj.add(e.toString());
-
-                    Exception causeExc = (Exception) e.getCause();
-                    while (causeExc != null) {
-                        sj.add(causeExc.toString());
-                        causeExc = (Exception) causeExc.getCause();
-                    }
-
-                    QUEUE_EX_MESSAGES.offer(sj.toString());
+                QUEUE_EX_MESSAGES.offer("Not a folder, not a file. Maybe I/O trouble. \n" + DIRECTORY.toString());
+            }
+        } else {
+            for (File fileFromDir : DIRECTORY.listFiles()) {
+                if (fileFromDir.isDirectory()) {
+                    DirectoryHandler task = new DirectoryHandler(fileFromDir,
+                            HASH_ALGORITHM,
+                            QUEUE_FILE_AND_CHECKSUM,
+                            QUEUE_EX_MESSAGES);
+                    task.fork();
+                    tasks.add(task);
+                } else {
+                    processFile(fileFromDir);
                 }
             }
         }
 
         tasks.forEach(ForkJoinTask::join);
+    }
+
+    private void processFile(File file) {
+        try {
+            FileAndChecksum pair = new FileAndChecksum(file, CHECKSUM_MAKER.makeCheckSum(file));
+            QUEUE_FILE_AND_CHECKSUM.offer(pair);
+        } catch (IOException e) {
+            StringJoiner sj = new StringJoiner("\n");
+            sj.add(e.toString());
+
+            Exception causeExc = (Exception) e.getCause();
+            while (causeExc != null) {
+                sj.add(causeExc.toString());
+                causeExc = (Exception) causeExc.getCause();
+            }
+
+            QUEUE_EX_MESSAGES.offer(sj.toString());
+        }
     }
 }
