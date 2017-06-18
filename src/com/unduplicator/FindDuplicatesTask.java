@@ -65,6 +65,20 @@ public class FindDuplicatesTask extends Task<HashMap<String, List<File>>> {
         fjThread.start();
 
         while (fjThread.isAlive() || !queueProcessed.isEmpty() || !queueExMessages.isEmpty()) {
+            //Cancellation
+            if (isCancelled()) {
+                fjPool.shutdownNow();
+                break;
+            }
+
+            if (queueProcessed.isEmpty() && queueExMessages.isEmpty()) {
+                try {
+                    Thread.sleep(500);
+                } catch (InterruptedException ex) {
+                    //No problem
+                }
+            }
+
             if (!queueProcessed.isEmpty()) {
                 FileAndChecksum pair = queueProcessed.poll();
                 //Here we find duplicated files
@@ -83,12 +97,6 @@ public class FindDuplicatesTask extends Task<HashMap<String, List<File>>> {
             if (!queueExMessages.isEmpty()) {
                 updateMessage(queueExMessages.poll());
                 filesCounter++;
-            }
-
-            //Cancellation
-            if (isCancelled()) {
-                fjPool.shutdownNow();
-                break;
             }
 
             updateProgress(filesCounter, filesTotal);
