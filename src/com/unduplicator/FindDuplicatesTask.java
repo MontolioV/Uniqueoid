@@ -43,7 +43,9 @@ public class FindDuplicatesTask extends Task<HashMap<String, List<File>>> {
         HashMap<String, List<File>> result = new HashMap<>();
         ForkJoinPool fjPool = new ForkJoinPool();
 
+        updateMessage("Считаем файлы");
         DIRECTORIES.forEach(dir -> filesTotal += countFiles(dir));
+        updateMessage("Всего " + filesTotal);
 
         Thread fjThread = new Thread(() -> {
             ArrayList<DirectoryHandler> taskList = new ArrayList<>();
