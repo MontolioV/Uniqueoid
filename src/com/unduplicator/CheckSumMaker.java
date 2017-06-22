@@ -20,6 +20,9 @@ public class CheckSumMaker {
     }
 
     public String makeCheckSum(File file) throws IOException {
+        if (file.length() == 0) {
+            throw new IOException("File is empty.\t" + file.toString());
+        }
         try (BufferedInputStream buffIS = new BufferedInputStream(new FileInputStream(file))) {
             byte[] bytes = new byte[1024];
             while (buffIS.read(bytes) > 0) {

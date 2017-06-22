@@ -75,7 +75,7 @@ public class FindDuplicatesTask extends Task<HashMap<String, List<File>>> {
 
             if (queueProcessed.isEmpty() && queueExMessages.isEmpty()) {
                 try {
-                    Thread.sleep(500);
+                    Thread.sleep(100);
                 } catch (InterruptedException ex) {
                     //No problem
                 }
