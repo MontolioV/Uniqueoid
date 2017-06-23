@@ -101,6 +101,7 @@ public class FindDuplicatesTask extends Task<HashMap<String, List<File>>> {
                 filesCounter++;
             }
 
+            updateTitle(fjPool.toString());
             updateProgress(filesCounter, filesTotal);
         }
 

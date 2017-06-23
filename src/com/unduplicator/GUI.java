@@ -10,10 +10,7 @@ import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.FlowPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
@@ -39,7 +36,7 @@ public class GUI extends Application {
     private Button startBut = new Button("Пуск");
     private Button stopBut = new Button("Отмена");
     private TextArea messages = new TextArea();
-
+    private Label poolStatus = new Label();
 
     public static void main(String[] args) {
         launch(args);
@@ -48,93 +45,6 @@ public class GUI extends Application {
     @Override
     public void start(Stage primaryStage) {
         mainStage = primaryStage;
-
-/*
-
-        progressBar.setMaxWidth(500);
-        progressBar.setVisible(false);
-
-        Label messagesLabel = new Label("Сообщения:");
-        messages.setEditable(false);
-        messages.setWrapText(true);
-
-
-        startBut.setOnAction(event -> {
-            messages.clear();
-            processedFilesHM = null;
-            task = new FindDuplicatesTask(targetDirs, algorithmCB.getValue());
-            progressBar.progressProperty().bind(task.progressProperty());
-            task.messageProperty().addListener((observable, oldValue, newValue) -> {
-                messages.appendText("\n" + newValue);
-            });
-            task.stateProperty().addListener((observable, oldValue, newValue) -> {
-                switch (newValue) {
-                    case READY:
-                        swapMode(true);
-                        break;
-                    case SCHEDULED:
-                        swapMode(true);
-                        break;
-                    case RUNNING:
-                        swapMode(true);
-                        messages.appendText("\nВыполняется...");
-                        break;
-                    case SUCCEEDED:
-                        swapMode(false);
-                        messages.appendText("\nВыполнено успешно");
-                        if (processedFilesHM != null) {
-                            for (Map.Entry<String, List<File>> entry : processedFilesHM.entrySet()) {
-                                if (entry.getValue().size() > 1) {
-                                    StringJoiner sj = new StringJoiner("\n");
-                                    sj.add(entry.getKey());
-                                    entry.getValue().forEach(file -> sj.add(file.toString()));
-                                    messages.appendText("\n\n");
-                                    messages.appendText(sj.toString());
-                                }
-                            }
-                        }
-                        break;
-                    case CANCELLED:
-                        swapMode(false);
-                        messages.appendText("\nОтменено");
-                        break;
-                    case FAILED:
-                        swapMode(false);
-                        messages.appendText("\nВозникла ошибка");
-                        break;
-                }
-            });
-            Thread taskThread = new Thread(() -> {
-                try {
-                    task.run();
-                    processedFilesHM = task.get();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                } catch (ExecutionException e) {
-                    e.printStackTrace();
-                }
-            });
-            taskThread.start();
-        });
-
-        stopBut.setOnAction(event -> {
-            if (task != null) {
-                task.cancel();
-            }
-        });
-
-        primaryStage.setScene(new Scene(mainPane, 700, 500));
-
-        mainPane.getChildren().addAll(
-                showDirectories,
-                addButtonsPane,
-                algorithmCB,
-                progressBar,
-                startBut,
-                stopBut,
-                messagesLabel,
-                messages);
-*/
 
         makeSetupScene();
         makeRuntimeScene();
@@ -215,6 +125,7 @@ public class GUI extends Application {
             processedFilesHM = null;
             task = new FindDuplicatesTask(targetDirs, algorithmCB.getValue());
             progressBar.progressProperty().bind(task.progressProperty());
+            poolStatus.textProperty().bind(task.titleProperty());
             task.messageProperty().addListener((observable, oldValue, newValue) -> {
                 messages.appendText("\n" + newValue);
             });
@@ -268,6 +179,8 @@ public class GUI extends Application {
                 }
             });
             taskThread.start();
+
+            mainStage.setScene(runtimeScene);
         });
         startBut.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
 
@@ -280,7 +193,32 @@ public class GUI extends Application {
     }
 
     private void makeRuntimeScene() {
+        progressBar.setMaxWidth(Double.MAX_VALUE);
+        poolStatus.setMaxWidth(Double.MAX_VALUE);
+        messages.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        messages.setEditable(false);
+        messages.setWrapText(true);
 
+        stopBut.setOnAction(event -> {
+            if (task != null) {
+                task.cancel();
+            }
+        });
+        HBox stopP = new HBox(stopBut);
+        stopP.setAlignment(Pos.CENTER);
+
+        VBox bottomP = new VBox(10,
+                poolStatus,
+                progressBar,
+                stopP);
+        bottomP.setPadding(new Insets(20, 0, 0, 0));
+
+        BorderPane runtimeP = new BorderPane();
+        runtimeP.setCenter(messages);
+        runtimeP.setBottom(bottomP);
+        runtimeP.setPadding(new Insets(20));
+
+        runtimeScene = new Scene(runtimeP);
     }
 
     private void makeResultScene() {
@@ -289,11 +227,9 @@ public class GUI extends Application {
 
     private void swapMode(boolean isRunning) {
         if (isRunning) {
-            progressBar.setVisible(true);
             startBut.setDisable(true);
             stopBut.setDisable(false);
         } else {
-            progressBar.setVisible(false);
             startBut.setDisable(false);
             stopBut.setDisable(true);
             task = null;
