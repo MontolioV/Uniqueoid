@@ -1,10 +1,7 @@
 package com.unduplicator;
 
 import javafx.application.Application;
-import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
@@ -23,7 +20,6 @@ import java.util.concurrent.ExecutionException;
  * <p>Created by MontolioV on 20.06.17.
  */
 public class GUI extends Application {
-    private List<File> targetDirs = new ArrayList<>();
     private HashMap<String,List<File>> processedFilesHM = new HashMap<>();
     private FindDuplicatesTask task;
 
@@ -55,6 +51,8 @@ public class GUI extends Application {
     }
 
     private void makeSetupScene() {
+        final List<File> targetDirs = new ArrayList<>();
+
         //Display
         Label headerLabel = new Label("Выбранные файлы и директории:");
         Label showDirLabel = new Label("");
@@ -97,7 +95,7 @@ public class GUI extends Application {
         });
         Button clearDirs = new Button("Очистить");
         clearDirs.setOnAction(event -> {
-            targetDirs = new ArrayList<>();
+            targetDirs.clear();
             showDirLabel.setText("");
         });
 
@@ -121,6 +119,7 @@ public class GUI extends Application {
 
         //Start button
         startBut.setOnAction(event -> {
+            long startTime = System.currentTimeMillis();
             messages.clear();
             processedFilesHM = null;
             task = new FindDuplicatesTask(targetDirs, algorithmCB.getValue());
@@ -142,8 +141,9 @@ public class GUI extends Application {
                         messages.appendText("\nВыполняется...");
                         break;
                     case SUCCEEDED:
+                        long durationMS = System.currentTimeMillis() - startTime;
                         swapMode(false);
-                        messages.appendText("\nВыполнено успешно");
+                        messages.appendText("\nВыполнено успешно за " + millisToTimeStr(durationMS));
 /*
                         if (processedFilesHM != null) {
                             for (Map.Entry<String, List<File>> entry : processedFilesHM.entrySet()) {
@@ -180,7 +180,7 @@ public class GUI extends Application {
             });
             taskThread.start();
 
-            mainStage.setScene(runtimeScene);
+            switchScene(runtimeScene);
         });
         startBut.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
 
@@ -199,12 +199,25 @@ public class GUI extends Application {
         messages.setEditable(false);
         messages.setWrapText(true);
 
+        Button toSetupBut = new Button("<-Настройки");
+        Button toResultBut = new Button("Результат->");
+
+        toSetupBut.setOnAction(event -> switchScene(setupScene));
+        toResultBut.setOnAction(event -> switchScene(resultScene));
         stopBut.setOnAction(event -> {
             if (task != null) {
                 task.cancel();
             }
         });
-        HBox stopP = new HBox(stopBut);
+
+        toSetupBut.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        toResultBut.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        stopBut.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+
+        TilePane stopP = new TilePane(Orientation.HORIZONTAL, 10, 0,
+                toSetupBut,
+                stopBut,
+                toResultBut);
         stopP.setAlignment(Pos.CENTER);
 
         VBox bottomP = new VBox(10,
@@ -229,10 +242,41 @@ public class GUI extends Application {
         if (isRunning) {
             startBut.setDisable(true);
             stopBut.setDisable(false);
+            progressBar.setVisible(true);
         } else {
             startBut.setDisable(false);
             stopBut.setDisable(true);
+            progressBar.setVisible(false);
             task = null;
         }
+    }
+
+    private String millisToTimeStr(long millis) {
+        String result;
+
+        long ms = millis % 1000;
+        long s = (millis / 1000) % 60;
+        long m = (millis / (1000 * 60)) % 60;
+        long h = (millis / (1000 * 60 * 60)) % 60;
+
+        if (millis >= 1000 * 60 * 60) {
+            result = String.format("%d ч %2d м %2d с %3d мс", h, m, s, ms);
+        } else if (millis >= 1000 * 60) {
+            result = String.format("%2d м %2d с %3d мс", m, s, ms);
+        } else if (millis >= 1000) {
+            result = String.format("%2d с %3d мс", s, ms);
+        } else {
+            result = String.format("%3d мс", ms);
+        }
+        return result;
+    }
+
+    private void switchScene(Scene newScene) {
+        double height = mainStage.getHeight();
+        double width = mainStage.getWidth();
+
+        mainStage.setScene(newScene);
+        mainStage.setHeight(height);
+        mainStage.setWidth(width);
     }
 }
