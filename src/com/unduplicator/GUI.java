@@ -1,7 +1,9 @@
 package com.unduplicator;
 
+import com.sun.javafx.collections.ObservableListWrapper;
 import javafx.application.Application;
 import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
@@ -20,8 +22,9 @@ import java.util.concurrent.ExecutionException;
  * <p>Created by MontolioV on 20.06.17.
  */
 public class GUI extends Application {
-    private HashMap<String,List<File>> processedFilesHM = new HashMap<>();
+    private HashMap<String, List<File>> processedFilesHM = new HashMap<>();
     private FindDuplicatesTask task;
+    private Set<File> filesToDelete = new HashSet<>();
 
     private Stage mainStage;
     private Scene setupScene;
@@ -33,6 +36,7 @@ public class GUI extends Application {
     private Button stopBut = new Button("Отмена");
     private TextArea messages = new TextArea();
     private Label poolStatus = new Label();
+    private ListView chSumListView = new ListView();
 
     public static void main(String[] args) {
         launch(args);
@@ -84,7 +88,7 @@ public class GUI extends Application {
             }
         });
         Button addFile = new Button("Добавить файл");
-        addFile.setOnAction(event ->{
+        addFile.setOnAction(event -> {
             FileChooser fileChooser = new FileChooser();
             File file = fileChooser.showOpenDialog(mainStage);
             if (file != null) {
@@ -144,19 +148,9 @@ public class GUI extends Application {
                         long durationMS = System.currentTimeMillis() - startTime;
                         swapMode(false);
                         messages.appendText("\nВыполнено успешно за " + millisToTimeStr(durationMS));
-/*
                         if (processedFilesHM != null) {
-                            for (Map.Entry<String, List<File>> entry : processedFilesHM.entrySet()) {
-                                if (entry.getValue().size() > 1) {
-                                    StringJoiner sj = new StringJoiner("\n");
-                                    sj.add(entry.getKey());
-                                    entry.getValue().forEach(file -> sj.add(file.toString()));
-                                    messages.appendText("\n\n");
-                                    messages.appendText(sj.toString());
-                                }
-                            }
+                            messages.appendText("\nНайдено дублирующихся файлов: " + processedFilesHM.size());
                         }
-*/
                         break;
                     case CANCELLED:
                         swapMode(false);
@@ -172,6 +166,8 @@ public class GUI extends Application {
                 try {
                     task.run();
                     processedFilesHM = task.get();
+                    ObservableList<String> obsListChSum = FXCollections.observableArrayList(processedFilesHM.keySet());
+                    chSumListView.setItems(obsListChSum);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 } catch (ExecutionException e) {
@@ -235,7 +231,60 @@ public class GUI extends Application {
     }
 
     private void makeResultScene() {
+        TilePane previewPane = new TilePane();
+        previewPane.setPrefColumns(3);
+        previewPane.setVgap(3);
+        previewPane.setHgap(3);
 
+        chSumListView.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
+        chSumListView.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
+            String chSum = (String) newValue;
+            List<File> selectedFiles = processedFilesHM.get(chSum);
+
+            previewPane.getChildren().clear();
+            for (File selectedFile : selectedFiles) {
+                Button button = new Button(selectedFile.getName());
+                button.setMaxSize(200, 200);
+                button.setOnAction(event -> {
+                    filesToDelete.remove(selectedFile);
+                    processedFilesHM.get(chSum).stream().
+                            filter(file -> !file.equals(selectedFile)).
+                            forEach(filesToDelete::add);
+                });
+                previewPane.getChildren().add(button);
+            }
+        });
+
+        //Main pane with list and preview
+        GridPane centerGrid = new GridPane();
+        centerGrid.setVgap(10);
+        centerGrid.setHgap(10);
+        ColumnConstraints cCons0 = new ColumnConstraints();
+        ColumnConstraints cCons1 = new ColumnConstraints();
+        cCons0.setPercentWidth(30);
+        cCons1.setPercentWidth(70);
+        centerGrid.getColumnConstraints().addAll(cCons0, cCons1);
+
+        centerGrid.add(chSumListView, 0, 0);
+        centerGrid.add(previewPane, 1, 0);
+
+        Button delete = new Button("Удалить");
+        delete.setOnAction(event -> {
+            StringJoiner sj = new StringJoiner("\n");
+            filesToDelete.forEach(f -> sj.add(f.toString()));
+            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+            alert.setTitle("Подтвердите удаление");
+            alert.setHeaderText("Удалить указанные файлы?");
+            alert.setContentText(sj.toString());
+            alert.showAndWait();
+        });
+
+        BorderPane resultPane = new BorderPane();
+        resultPane.setCenter(centerGrid);
+        resultPane.setBottom(delete);
+        resultPane.setPadding(new Insets(10));
+
+        resultScene = new Scene(resultPane);
     }
 
     private void swapMode(boolean isRunning) {
@@ -279,4 +328,6 @@ public class GUI extends Application {
         mainStage.setHeight(height);
         mainStage.setWidth(width);
     }
+
+
 }
