@@ -1,22 +1,29 @@
 package com.unduplicator;
 
-import com.sun.javafx.collections.ObservableListWrapper;
 import javafx.application.Application;
+import javafx.application.Platform;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.concurrent.Task;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.image.*;
 import javafx.scene.layout.*;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
-import java.io.File;
+import java.io.*;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * <p>Created by MontolioV on 20.06.17.
@@ -36,7 +43,7 @@ public class GUI extends Application {
     private Button stopBut = new Button("Отмена");
     private TextArea messages = new TextArea();
     private Label poolStatus = new Label();
-    private ListView chSumListView = new ListView();
+    private ListView<String> chSumListView = new ListView<>();
 
     public static void main(String[] args) {
         launch(args);
@@ -168,9 +175,7 @@ public class GUI extends Application {
                     processedFilesHM = task.get();
                     ObservableList<String> obsListChSum = FXCollections.observableArrayList(processedFilesHM.keySet());
                     chSumListView.setItems(obsListChSum);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                } catch (ExecutionException e) {
+                } catch (InterruptedException | ExecutionException e) {
                     e.printStackTrace();
                 }
             });
@@ -235,23 +240,104 @@ public class GUI extends Application {
         previewPane.setPrefColumns(3);
         previewPane.setVgap(3);
         previewPane.setHgap(3);
+        previewPane.setPadding(new Insets(5));
+        ScrollPane previewScrP = new ScrollPane(previewPane);
+        previewScrP.setFitToWidth(true);
+
 
         chSumListView.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
-        chSumListView.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
-            String chSum = (String) newValue;
-            List<File> selectedFiles = processedFilesHM.get(chSum);
+        chSumListView.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<String>() {
+            private Task<Void> prevTask;
+            final double WIDTH = 200;
+            final double HEIGHT = 200;
 
-            previewPane.getChildren().clear();
-            for (File selectedFile : selectedFiles) {
-                Button button = new Button(selectedFile.getName());
-                button.setMaxSize(200, 200);
-                button.setOnAction(event -> {
-                    filesToDelete.remove(selectedFile);
-                    processedFilesHM.get(chSum).stream().
-                            filter(file -> !file.equals(selectedFile)).
-                            forEach(filesToDelete::add);
-                });
-                previewPane.getChildren().add(button);
+            @Override
+            public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
+                String chSum = newValue;
+                List<File> selectedFiles = processedFilesHM.get(chSum);
+
+                if (prevTask != null) {
+                    prevTask.cancel();
+                }
+                previewPane.getChildren().clear();
+
+                prevTask = new Task<Void>() {
+                    ArrayList<Task<Void>> tasks = new ArrayList<>();
+                    AtomicBoolean stop = new AtomicBoolean();
+
+                    @Override
+                    protected Void call() throws Exception {
+                        Executor pool = Executors.newFixedThreadPool(2, r -> {
+                            Thread daemonThr = new Thread(r);
+                            daemonThr.setDaemon(true);
+                            return daemonThr;
+                        });
+
+                        for (File selectedFile : selectedFiles) {
+                            if (isCancelled()) {
+                                return null;
+                            }
+
+                            ImageView imageView = new ImageView();
+                            ProgressIndicator prIndicator = new ProgressIndicator();
+                            StackPane stackPane = new StackPane(prIndicator);
+
+                            Task<Void> imgTask = new Task<Void>() {
+                                final long MAX_IMG_SIZE = 52_500_000;
+
+                                @Override
+                                protected Void call() throws Exception {
+                                    Button previewButton = new Button(selectedFile.getName(), imageView);
+                                    previewButton.setMaxSize(WIDTH, HEIGHT);
+                                    previewButton.setContentDisplay(ContentDisplay.TOP);
+                                    previewButton.setOnAction(event1 -> {
+                                        filesToDelete.remove(selectedFile);
+                                        processedFilesHM.get(chSum).stream().
+                                                filter(file -> !file.equals(selectedFile)).
+                                                forEach(filesToDelete::add);
+                                    });
+                                    if (selectedFile.length() < MAX_IMG_SIZE) {
+                                        try (BufferedInputStream bis = new BufferedInputStream(new FileInputStream(selectedFile))) {
+                                            Image image = new Image(bis, WIDTH, HEIGHT, true, true);
+                                            if (!isCancelled()) {
+                                                Platform.runLater(() -> {
+                                                    prIndicator.progressProperty().bind(image.progressProperty());
+                                                    stackPane.getChildren().add(previewButton);
+                                                });
+                                            } else {
+                                                image.cancel();
+                                            }
+                                            imageView.setImage(image);
+                                        } catch (IOException e) {
+                                            e.printStackTrace();
+                                        }
+                                    }
+                                    return null;
+                                }
+                            };
+
+                            pool.execute(imgTask);
+                            tasks.add(imgTask);
+
+                            if (!isCancelled()) {
+                                Platform.runLater(() -> previewPane.getChildren().add(stackPane));
+                            }
+                        }
+                        return null;
+                    }
+
+                    @Override
+                    public boolean cancel(boolean mayInterruptIfRunning) {
+                        boolean result = super.cancel(mayInterruptIfRunning);
+                        stop.set(true);
+                        tasks.forEach(Task::cancel);
+                        return result;
+                    }
+                };
+
+                Thread thread = new Thread(prevTask);
+                thread.setDaemon(true);
+                thread.start();
             }
         });
 
@@ -264,9 +350,12 @@ public class GUI extends Application {
         cCons0.setPercentWidth(30);
         cCons1.setPercentWidth(70);
         centerGrid.getColumnConstraints().addAll(cCons0, cCons1);
-
+        RowConstraints rCons0 = new RowConstraints();
+        rCons0.setPercentHeight(100);
+        centerGrid.getRowConstraints().setAll(rCons0);
+        centerGrid.setPadding(new Insets(0, 0, 10, 0));
         centerGrid.add(chSumListView, 0, 0);
-        centerGrid.add(previewPane, 1, 0);
+        centerGrid.add(previewScrP, 1, 0);
 
         Button delete = new Button("Удалить");
         delete.setOnAction(event -> {
