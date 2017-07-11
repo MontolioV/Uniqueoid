@@ -43,7 +43,7 @@ public class GUI extends Application {
     private Button stopBut = new Button("Отмена");
     private TextArea messages = new TextArea();
     private Label poolStatus = new Label();
-    private ListView<String> chSumListView = new ListView<>();
+    private ListView<String> duplChSumListView = new ListView<>();
 
     public static void main(String[] args) {
         launch(args);
@@ -156,7 +156,13 @@ public class GUI extends Application {
                         swapMode(false);
                         messages.appendText("\nВыполнено успешно за " + millisToTimeStr(durationMS));
                         if (processedFilesHM != null) {
-                            messages.appendText("\nНайдено дублирующихся файлов: " + processedFilesHM.size());
+                            int duplCount = 0;
+                            for (Map.Entry<String, List<File>> entry : processedFilesHM.entrySet()) {
+                                if (entry.getValue().size() > 1) {
+                                    duplCount += entry.getValue().size() - 1;
+                                }
+                            }
+                            messages.appendText("\nНайдено дублирующих файлов: " + duplCount);
                         }
                         break;
                     case CANCELLED:
@@ -173,8 +179,13 @@ public class GUI extends Application {
                 try {
                     task.run();
                     processedFilesHM = task.get();
-                    ObservableList<String> obsListChSum = FXCollections.observableArrayList(processedFilesHM.keySet());
-                    chSumListView.setItems(obsListChSum);
+                    ObservableList<String> obsListChSum = FXCollections.observableArrayList();
+                    processedFilesHM.forEach((s, files) -> {
+                        if (files.size() > 1) {
+                            obsListChSum.add(s);
+                        }
+                    });
+                    duplChSumListView.setItems(obsListChSum);
                 } catch (InterruptedException | ExecutionException e) {
                     e.printStackTrace();
                 }
@@ -245,8 +256,8 @@ public class GUI extends Application {
         previewScrP.setFitToWidth(true);
 
 
-        chSumListView.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
-        chSumListView.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<String>() {
+        duplChSumListView.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
+        duplChSumListView.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<String>() {
             private Task<Void> prevTask;
             final double WIDTH = 200;
             final double HEIGHT = 200;
@@ -354,7 +365,7 @@ public class GUI extends Application {
         rCons0.setPercentHeight(100);
         centerGrid.getRowConstraints().setAll(rCons0);
         centerGrid.setPadding(new Insets(0, 0, 10, 0));
-        centerGrid.add(chSumListView, 0, 0);
+        centerGrid.add(duplChSumListView, 0, 0);
         centerGrid.add(previewScrP, 1, 0);
 
         Button delete = new Button("Удалить");
