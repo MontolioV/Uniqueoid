@@ -20,6 +20,7 @@ public class FindDuplicatesTask extends Task<HashMap<String, List<File>>> {
     private int filesTotal = 0;
 
     public FindDuplicatesTask(List<File> directories, String hash_algorithm) {
+        super();
         this.DIRECTORIES = directories;
         HASH_ALGORITHM = hash_algorithm;
     }

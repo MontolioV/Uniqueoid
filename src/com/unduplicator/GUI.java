@@ -372,11 +372,26 @@ public class GUI extends Application {
         delete.setOnAction(event -> {
             StringJoiner sj = new StringJoiner("\n");
             filesToDelete.forEach(f -> sj.add(f.toString()));
+            TextArea fullListTA = new TextArea(sj.toString());
+
             Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
             alert.setTitle("Подтвердите удаление");
-            alert.setHeaderText("Удалить указанные файлы?");
-            alert.setContentText(sj.toString());
-            alert.showAndWait();
+            alert.setHeaderText("Выбрано на удаление файлов: " + filesToDelete.size() + ". " +
+                                "Это необратимая операция. Удалить?");
+            alert.getDialogPane().setExpandableContent(fullListTA);
+
+            //Got a bug with stage resizing, must resize manually
+            alert.getDialogPane().expandedProperty().addListener(observable -> {
+                Platform.runLater(() -> {
+                    alert.getDialogPane().requestLayout();
+                    Stage stage = (Stage) alert.getDialogPane().getScene().getWindow();
+                    stage.sizeToScene();
+                });
+            });
+
+            alert.showAndWait()
+                    .filter(response -> response == ButtonType.OK)
+                    .ifPresent(type -> filesToDelete.forEach(File::delete));
         });
 
         BorderPane resultPane = new BorderPane();
