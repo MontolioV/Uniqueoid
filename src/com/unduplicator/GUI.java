@@ -373,11 +373,12 @@ public class GUI extends Application {
             StringJoiner sj = new StringJoiner("\n");
             filesToDelete.forEach(f -> sj.add(f.toString()));
             TextArea fullListTA = new TextArea(sj.toString());
+            DeleteFilesTask delTask = new DeleteFilesTask(new ArrayList<>(filesToDelete));
 
             Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
             alert.setTitle("Подтвердите удаление");
             alert.setHeaderText("Выбрано на удаление файлов: " + filesToDelete.size() + ". " +
-                                "Это необратимая операция. Удалить?");
+                    "Так же будут удалены пустые папки. Это необратимая операция. Удалить?");
             alert.getDialogPane().setExpandableContent(fullListTA);
 
             //Got a bug with stage resizing, must resize manually
@@ -391,7 +392,7 @@ public class GUI extends Application {
 
             alert.showAndWait()
                     .filter(response -> response == ButtonType.OK)
-                    .ifPresent(type -> filesToDelete.forEach(File::delete));
+                    .ifPresent(type -> delTask.run());
         });
 
         BorderPane resultPane = new BorderPane();
