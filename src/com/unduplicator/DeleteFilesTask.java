@@ -26,6 +26,8 @@ public class DeleteFilesTask extends Task<List<File>> {
 
     @Override
     protected List<File> call() throws Exception {
+        int counter = 0;
+        double progress = 0;
         //Delete files
         for (File file : fileList) {
             if (file.isDirectory()) {
@@ -33,25 +35,33 @@ public class DeleteFilesTask extends Task<List<File>> {
             } else if (!file.delete()) {
                 notDeletedFileList.add(file);
             }
+            progress += 0.5 * (++counter / fileList.size());
+            updateProgress(progress, 1);
         }
 
         //Delete empty dirs
+        counter = 0;
         for (File file : fileList) {
             if (file.getParentFile() == null) {
                 throw new NoSuchFileException("Hasn't got parent: " + file.toString());
             } else {
                 deleteOnlyEmptyDir(file.getParentFile());
             }
+            progress += 0.25 * (++counter / fileList.size());
+            updateProgress(progress, 1);
         }
 
         //Sort dirs to avoid situation, when dir can't be deleted cause it contains another empty dir
         Comparator<File> pathDepthComp = Comparator.comparingInt(f -> f.toPath().toAbsolutePath().getNameCount());
         dirsToDelete.sort(pathDepthComp.reversed());
 
+        counter = 0;
         for (File file : dirsToDelete) {
             if (file.exists() && !file.delete()) {
                 notDeletedFileList.add(file);
             }
+            progress += 0.25 * (++counter / dirsToDelete.size());
+            updateProgress(progress, 1);
         }
 
         return notDeletedFileList;

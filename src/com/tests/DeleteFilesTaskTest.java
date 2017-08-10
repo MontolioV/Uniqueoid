@@ -1,6 +1,7 @@
 package com.tests;
 
 import com.unduplicator.DeleteFilesTask;
+import javafx.application.Platform;
 import javafx.embed.swing.JFXPanel;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -29,8 +30,10 @@ public class DeleteFilesTaskTest {
         File brch1 = new File("test_mat/newdir/brch1/inner");
         File brch2 = new File("test_mat/newdir/brch2/inner");
 
-        assertTrue(brch1.mkdirs());
-        assertTrue(brch2.mkdirs());
+        brch1.mkdirs();
+        brch2.mkdirs();
+        assertTrue(brch1.exists());
+        assertTrue(brch2.exists());
         assertTrue(mainDir.exists());
         assertTrue(rootDir.exists());
 
@@ -51,7 +54,9 @@ public class DeleteFilesTaskTest {
         assertTrue(brch1.listFiles().length == 0);
 
         DeleteFilesTask delTask = new DeleteFilesTask(fileAL);
+        assertEquals(-1, delTask.getProgress(), 0.001);
         delTask.run();
+        Platform.runLater(() -> assertEquals(1, delTask.getProgress(), 0.001));
         assertEquals(0, delTask.get().size());
 
         assertFalse(mainDir.exists());

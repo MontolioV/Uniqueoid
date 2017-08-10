@@ -10,6 +10,7 @@ import javafx.concurrent.Task;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.*;
@@ -24,6 +25,9 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 /**
  * <p>Created by MontolioV on 20.06.17.
@@ -179,15 +183,9 @@ public class GUI extends Application {
                 try {
                     task.run();
                     processedFilesHM = task.get();
-                    ObservableList<String> obsListChSum = FXCollections.observableArrayList();
-                    processedFilesHM.forEach((s, files) -> {
-                        if (files.size() > 1) {
-                            obsListChSum.add(s);
-                        }
-                    });
-                    duplChSumListView.setItems(obsListChSum);
+                    updDuplListView();
                 } catch (InterruptedException | ExecutionException e) {
-                    e.printStackTrace();
+                    showException(e);
                 }
             });
             taskThread.start();
@@ -211,8 +209,8 @@ public class GUI extends Application {
         messages.setEditable(false);
         messages.setWrapText(true);
 
-        Button toSetupBut = new Button("<-Настройки");
-        Button toResultBut = new Button("Результат->");
+        Button toSetupBut = new Button("Настройки");
+        Button toResultBut = new Button("Результат");
 
         toSetupBut.setOnAction(event -> switchScene(setupScene));
         toResultBut.setOnAction(event -> switchScene(resultScene));
@@ -255,6 +253,24 @@ public class GUI extends Application {
         ScrollPane previewScrP = new ScrollPane(previewPane);
         previewScrP.setFitToWidth(true);
 
+        BiConsumer<File, String> setFilesToDeletion = (selectedFile, chSum) -> {
+            filesToDelete.remove(selectedFile);
+            processedFilesHM.get(chSum).stream().
+                    filter(file -> !file.equals(selectedFile)).
+                    forEach(filesToDelete::add);
+        };
+        ObservableList<File> addressValues = FXCollections.observableArrayList();
+        ListView<File> addressListLView = new ListView<>(addressValues);
+        addressListLView.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
+        addressListLView.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
+            //ListView and Preview buttons are connected by index
+            int boundIndex = addressListLView.getSelectionModel().getSelectedIndex();
+            previewPane.getChildren().stream().filter(Node::isDisabled).forEach(node -> node.setDisable(false));
+            if (boundIndex > -1) {
+                previewPane.getChildren().get(boundIndex).setDisable(true);
+            }
+            setFilesToDeletion.accept(newValue, duplChSumListView.getSelectionModel().getSelectedItem());
+        });
 
         duplChSumListView.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
         duplChSumListView.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<String>() {
@@ -266,6 +282,7 @@ public class GUI extends Application {
             public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
                 String chSum = newValue;
                 List<File> selectedFiles = processedFilesHM.get(chSum);
+                addressValues.clear();
 
                 if (prevTask != null) {
                     prevTask.cancel();
@@ -298,14 +315,21 @@ public class GUI extends Application {
 
                                 @Override
                                 protected Void call() throws Exception {
+                                    //ListView and Preview buttons are connected by index
+                                    int indexInLV = addressValues.size();
+
+                                    Platform.runLater(() -> {
+                                        addressValues.add(selectedFile);
+                                    });
+
                                     Button previewButton = new Button(selectedFile.getName(), imageView);
                                     previewButton.setMaxSize(WIDTH, HEIGHT);
                                     previewButton.setContentDisplay(ContentDisplay.TOP);
                                     previewButton.setOnAction(event1 -> {
-                                        filesToDelete.remove(selectedFile);
-                                        processedFilesHM.get(chSum).stream().
-                                                filter(file -> !file.equals(selectedFile)).
-                                                forEach(filesToDelete::add);
+                                        Platform.runLater(() -> {
+                                            addressListLView.getSelectionModel().select(indexInLV);
+                                            addressListLView.scrollTo(indexInLV);
+                                        });
                                     });
                                     if (selectedFile.length() < MAX_IMG_SIZE) {
                                         try (BufferedInputStream bis = new BufferedInputStream(new FileInputStream(selectedFile))) {
@@ -320,7 +344,7 @@ public class GUI extends Application {
                                             }
                                             imageView.setImage(image);
                                         } catch (IOException e) {
-                                            e.printStackTrace();
+                                            showException(e);
                                         }
                                     }
                                     return null;
@@ -358,47 +382,92 @@ public class GUI extends Application {
         centerGrid.setHgap(10);
         ColumnConstraints cCons0 = new ColumnConstraints();
         ColumnConstraints cCons1 = new ColumnConstraints();
-        cCons0.setPercentWidth(30);
-        cCons1.setPercentWidth(70);
+        cCons0.setPercentWidth(20);
+        cCons1.setPercentWidth(80);
         centerGrid.getColumnConstraints().addAll(cCons0, cCons1);
         RowConstraints rCons0 = new RowConstraints();
-        rCons0.setPercentHeight(100);
-        centerGrid.getRowConstraints().setAll(rCons0);
+        RowConstraints rCons1 = new RowConstraints();
+        RowConstraints rCons2 = new RowConstraints();
+        rCons0.setPercentHeight(0);
+        rCons1.setPercentHeight(70);
+        rCons2.setPercentHeight(30);
+        centerGrid.getRowConstraints().setAll(rCons0, rCons1, rCons2);
         centerGrid.setPadding(new Insets(0, 0, 10, 0));
-        centerGrid.add(duplChSumListView, 0, 0);
-        centerGrid.add(previewScrP, 1, 0);
 
-        Button delete = new Button("Удалить");
-        delete.setOnAction(event -> {
-            StringJoiner sj = new StringJoiner("\n");
-            filesToDelete.forEach(f -> sj.add(f.toString()));
-            TextArea fullListTA = new TextArea(sj.toString());
+        centerGrid.add(new Label("Хеш сумма"), 0, 0);
+        centerGrid.add(duplChSumListView, 0, 1);
+        centerGrid.add(new Label("Превью"), 1, 0);
+        centerGrid.add(previewScrP, 1, 1);
+        centerGrid.add(addressListLView,0,2,2,1);
+
+
+        ProgressBar pbDel = new ProgressBar();
+        pbDel.setManaged(false);
+        pbDel.setMaxWidth(Double.MAX_VALUE);
+
+        Button toSetupBut = new Button("Настройки");
+        Button toRuntimeBut = new Button("Статистика");
+        toSetupBut.setOnAction(event -> switchScene(setupScene));
+        toRuntimeBut.setOnAction(event -> switchScene(runtimeScene));
+        Button deleteButton = new Button("Удалить");
+        deleteButton.setOnAction(event -> {
+            Function<Collection<File>, TextArea> colToTAFunction = files -> {
+                StringJoiner sj = new StringJoiner("\n");
+                files.forEach(f -> sj.add(f.toString()));
+                return new TextArea(sj.toString());
+            };
+
             DeleteFilesTask delTask = new DeleteFilesTask(new ArrayList<>(filesToDelete));
 
             Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
             alert.setTitle("Подтвердите удаление");
             alert.setHeaderText("Выбрано на удаление файлов: " + filesToDelete.size() + ". " +
                     "Так же будут удалены пустые папки. Это необратимая операция. Удалить?");
-            alert.getDialogPane().setExpandableContent(fullListTA);
+            alert.getDialogPane().setExpandableContent(colToTAFunction.apply(filesToDelete));
 
-            //Got a bug with stage resizing, must resize manually
-            alert.getDialogPane().expandedProperty().addListener(observable -> {
-                Platform.runLater(() -> {
-                    alert.getDialogPane().requestLayout();
-                    Stage stage = (Stage) alert.getDialogPane().getScene().getWindow();
-                    stage.sizeToScene();
-                });
-            });
+            resizeAlertManually(alert);
 
             alert.showAndWait()
                     .filter(response -> response == ButtonType.OK)
-                    .ifPresent(type -> delTask.run());
+                    .ifPresent(type -> {
+                        Alert reportAlert = new Alert(Alert.AlertType.INFORMATION);
+                        pbDel.progressProperty().bind(delTask.progressProperty());
+                        pbDel.setManaged(true);
+                        delTask.run();
+                        try {
+                            List<File> notDeletedList = delTask.get();
+                            if (!notDeletedList.isEmpty()) {
+                                reportAlert.setHeaderText("Некоторые файлы не удалось удалить.");
+                                reportAlert.getDialogPane().setExpandableContent(
+                                        colToTAFunction.apply(notDeletedList));
+                            } else {
+                                reportAlert.setHeaderText("Удаление успешно выполнено.");
+                            }
+                        } catch (InterruptedException | ExecutionException e) {
+                            showException(e);
+                        }
+
+                        updProcFilesHM();
+                        updDuplListView();
+                        pbDel.setManaged(false);
+                        reportAlert.showAndWait();
+                    });
         });
+
+        HBox buttonsBox = new HBox(5,
+                toSetupBut,
+                deleteButton,
+                toRuntimeBut);
+        buttonsBox.setAlignment(Pos.CENTER);
+
+        VBox bottomBox = new VBox(10,
+                pbDel,
+                buttonsBox);
 
         BorderPane resultPane = new BorderPane();
         resultPane.setCenter(centerGrid);
-        resultPane.setBottom(delete);
-        resultPane.setPadding(new Insets(10));
+        resultPane.setBottom(bottomBox);
+        resultPane.setPadding(new Insets(20));
 
         resultScene = new Scene(resultPane);
     }
@@ -445,5 +514,48 @@ public class GUI extends Application {
         mainStage.setWidth(width);
     }
 
+    private void updProcFilesHM() {
+        processedFilesHM.forEach((s, files) ->{
+            ArrayList<File> updatedList = new ArrayList<>();
+            for (File file : files) {
+                if (file.exists()) {
+                    updatedList.add(file);
+                }
+            }
+            processedFilesHM.replace(s, updatedList);
+        });
+    }
 
+    private void updDuplListView() {
+        ObservableList<String> obsListChSum = FXCollections.observableArrayList();
+        processedFilesHM.forEach((s, files) -> {
+            if (files.size() > 1) {
+                obsListChSum.add(s);
+            }
+        });
+        duplChSumListView.setItems(obsListChSum);
+    }
+
+    private void showException(Exception ex) {
+        StringWriter stringWriter = new StringWriter();
+        ex.printStackTrace(new PrintWriter(stringWriter));
+
+        Alert exAlert = new Alert(Alert.AlertType.ERROR);
+        exAlert.setHeaderText("При выполнении возникло исключение:" + "\n" + ex.toString());
+        exAlert.getDialogPane().setExpandableContent(new TextArea(stringWriter.toString()));
+        resizeAlertManually(exAlert);
+
+        exAlert.showAndWait();
+    }
+
+    private void resizeAlertManually(Alert alert) {
+        //Got a bug with stage resizing, must resize manually
+        alert.getDialogPane().expandedProperty().addListener(observable -> {
+            Platform.runLater(() -> {
+                alert.getDialogPane().requestLayout();
+                Stage stage = (Stage) alert.getDialogPane().getScene().getWindow();
+                stage.sizeToScene();
+            });
+        });
+    }
 }
