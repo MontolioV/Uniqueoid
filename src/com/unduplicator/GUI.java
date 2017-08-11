@@ -33,6 +33,8 @@ import java.util.function.Function;
  * <p>Created by MontolioV on 20.06.17.
  */
 public class GUI extends Application {
+    private ResourceBundle resourceBundle;
+
     private HashMap<String, List<File>> processedFilesHM = new HashMap<>();
     private FindDuplicatesTask task;
     private Set<File> filesToDelete = new HashSet<>();
@@ -51,6 +53,28 @@ public class GUI extends Application {
 
     public static void main(String[] args) {
         launch(args);
+    }
+
+    @Override
+    public void init() throws Exception {
+        super.init();
+
+        File settings = new File(System.getProperty("user.dir") + "/settings.ser");
+        String language;
+
+        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(settings))) {
+            language = (String) ois.readObject();
+        }catch (IOException e) {
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public void stop() throws Exception {
+        super.stop();
+
     }
 
     @Override
@@ -540,12 +564,14 @@ public class GUI extends Application {
         StringWriter stringWriter = new StringWriter();
         ex.printStackTrace(new PrintWriter(stringWriter));
 
-        Alert exAlert = new Alert(Alert.AlertType.ERROR);
-        exAlert.setHeaderText("При выполнении возникло исключение:" + "\n" + ex.toString());
-        exAlert.getDialogPane().setExpandableContent(new TextArea(stringWriter.toString()));
-        resizeAlertManually(exAlert);
+        Platform.runLater(() -> {
+            Alert exAlert = new Alert(Alert.AlertType.ERROR);
+            exAlert.setHeaderText("При выполнении возникло исключение:" + "\n" + ex.toString());
+            exAlert.getDialogPane().setExpandableContent(new TextArea(stringWriter.toString()));
+            resizeAlertManually(exAlert);
 
-        exAlert.showAndWait();
+            exAlert.showAndWait();
+        });
     }
 
     private void resizeAlertManually(Alert alert) {
