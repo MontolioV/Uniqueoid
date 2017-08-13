@@ -26,14 +26,17 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
  * <p>Created by MontolioV on 20.06.17.
  */
 public class GUI extends Application {
-    private ResourceBundle resourceBundle;
+//    private Locale locale = new Locale("ru", "RU");
+    private Locale locale = new Locale("en", "EN");
+    private ResourceBundle guiBundle;
+    private ResourceBundle messagesBundle;
+    private ResourceBundle exceptionBundle;
 
     private HashMap<String, List<File>> processedFilesHM = new HashMap<>();
     private FindDuplicatesTask task;
@@ -45,9 +48,9 @@ public class GUI extends Application {
     private Scene resultScene;
 
     private ProgressBar progressBar = new ProgressBar();
-    private Button startBut = new Button("Пуск");
-    private Button stopBut = new Button("Отмена");
-    private TextArea messages = new TextArea();
+    private Button startBut;
+    private Button stopBut;
+    private TextArea messagesTA = new TextArea();
     private Label poolStatus = new Label();
     private ListView<String> duplChSumListView = new ListView<>();
 
@@ -61,14 +64,19 @@ public class GUI extends Application {
 
         File settings = new File(System.getProperty("user.dir") + "/settings.ser");
         String language;
+        String country;
 
         try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(settings))) {
             language = (String) ois.readObject();
-        }catch (IOException e) {
-            e.printStackTrace();
-        } catch (ClassNotFoundException e) {
+            country = (String) ois.readObject();
+            locale = new Locale(language, country);
+        }catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
         }
+
+        guiBundle = ResourceBundle.getBundle("com.resources.GUI_Bundle", locale);
+        messagesBundle = ResourceBundle.getBundle("com.resources.Messages_Bundle", locale);
+        exceptionBundle = ResourceBundle.getBundle("com.resources.Exception_Bundle", locale);
     }
 
     @Override
@@ -91,9 +99,10 @@ public class GUI extends Application {
 
     private void makeSetupScene() {
         final List<File> targetDirs = new ArrayList<>();
+        startBut = new Button(guiBundle.getString("startButton"));
 
         //Display
-        Label headerLabel = new Label("Выбранные файлы и директории:");
+        Label headerLabel = new Label(guiBundle.getString("headerLabel"));
         Label showDirLabel = new Label("");
 
         VBox innerBox = new VBox(headerLabel);
@@ -107,12 +116,12 @@ public class GUI extends Application {
                 showDirLabel);
 
         //Setting buttons
-        Label algorithmLabel = new Label("Хеш функция");
+        Label algorithmLabel = new Label(guiBundle.getString("algorithmLabel"));
         ComboBox<String> algorithmCB = new ComboBox<>(FXCollections.observableArrayList(
                 "MD5", "SHA-1", "SHA-256"));
         algorithmCB.getSelectionModel().selectLast();
 
-        Button addDirectory = new Button("Добавить папку");
+        Button addDirectory = new Button(guiBundle.getString("addDirectoryButton"));
         addDirectory.setOnAction(event -> {
             DirectoryChooser dirChooser = new DirectoryChooser();
             File dir = dirChooser.showDialog(mainStage);
@@ -122,7 +131,7 @@ public class GUI extends Application {
                 targetDirs.add(dir);
             }
         });
-        Button addFile = new Button("Добавить файл");
+        Button addFile = new Button(guiBundle.getString("addFileButton"));
         addFile.setOnAction(event -> {
             FileChooser fileChooser = new FileChooser();
             File file = fileChooser.showOpenDialog(mainStage);
@@ -132,7 +141,7 @@ public class GUI extends Application {
                 targetDirs.add(file);
             }
         });
-        Button clearDirs = new Button("Очистить");
+        Button clearDirs = new Button(guiBundle.getString("clearDirsButton"));
         clearDirs.setOnAction(event -> {
             targetDirs.clear();
             showDirLabel.setText("");
@@ -159,13 +168,13 @@ public class GUI extends Application {
         //Start button
         startBut.setOnAction(event -> {
             long startTime = System.currentTimeMillis();
-            messages.clear();
+            messagesTA.clear();
             processedFilesHM = null;
-            task = new FindDuplicatesTask(targetDirs, algorithmCB.getValue());
+            task = new FindDuplicatesTask(targetDirs, algorithmCB.getValue(), messagesBundle, exceptionBundle);
             progressBar.progressProperty().bind(task.progressProperty());
             poolStatus.textProperty().bind(task.titleProperty());
             task.messageProperty().addListener((observable, oldValue, newValue) -> {
-                messages.appendText("\n" + newValue);
+                messagesTA.appendText("\n" + newValue);
             });
             task.stateProperty().addListener((observable, oldValue, newValue) -> {
                 switch (newValue) {
@@ -177,12 +186,12 @@ public class GUI extends Application {
                         break;
                     case RUNNING:
                         swapMode(true);
-                        messages.appendText("\nВыполняется...");
+                        messagesTA.appendText("\n" + messagesBundle.getString("taskProcessing"));
                         break;
                     case SUCCEEDED:
                         long durationMS = System.currentTimeMillis() - startTime;
                         swapMode(false);
-                        messages.appendText("\nВыполнено успешно за " + millisToTimeStr(durationMS));
+                        messagesTA.appendText("\n" + messagesBundle.getString("completeSuccessfully") + millisToTimeStr(durationMS));
                         if (processedFilesHM != null) {
                             int duplCount = 0;
                             for (Map.Entry<String, List<File>> entry : processedFilesHM.entrySet()) {
@@ -190,16 +199,16 @@ public class GUI extends Application {
                                     duplCount += entry.getValue().size() - 1;
                                 }
                             }
-                            messages.appendText("\nНайдено дублирующих файлов: " + duplCount);
+                            messagesTA.appendText("\n" + messagesBundle.getString("foundDuplicates") + duplCount);
                         }
                         break;
                     case CANCELLED:
                         swapMode(false);
-                        messages.appendText("\nОтменено");
+                        messagesTA.appendText("\n" + messagesBundle.getString("canceled"));
                         break;
                     case FAILED:
                         swapMode(false);
-                        messages.appendText("\nВозникла ошибка");
+                        messagesTA.appendText("\n" + messagesBundle.getString("error"));
                         break;
                 }
             });
@@ -212,6 +221,7 @@ public class GUI extends Application {
                     showException(e);
                 }
             });
+            taskThread.setDaemon(true);
             taskThread.start();
 
             switchScene(runtimeScene);
@@ -227,14 +237,16 @@ public class GUI extends Application {
     }
 
     private void makeRuntimeScene() {
+        stopBut = new Button(guiBundle.getString("cancelButton"));
+
         progressBar.setMaxWidth(Double.MAX_VALUE);
         poolStatus.setMaxWidth(Double.MAX_VALUE);
-        messages.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
-        messages.setEditable(false);
-        messages.setWrapText(true);
+        messagesTA.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        messagesTA.setEditable(false);
+        messagesTA.setWrapText(true);
 
-        Button toSetupBut = new Button("Настройки");
-        Button toResultBut = new Button("Результат");
+        Button toSetupBut = new Button(guiBundle.getString("setupButton"));
+        Button toResultBut = new Button(guiBundle.getString("resultButton"));
 
         toSetupBut.setOnAction(event -> switchScene(setupScene));
         toResultBut.setOnAction(event -> switchScene(resultScene));
@@ -261,7 +273,7 @@ public class GUI extends Application {
         bottomP.setPadding(new Insets(20, 0, 0, 0));
 
         BorderPane runtimeP = new BorderPane();
-        runtimeP.setCenter(messages);
+        runtimeP.setCenter(messagesTA);
         runtimeP.setBottom(bottomP);
         runtimeP.setPadding(new Insets(20));
 
@@ -342,9 +354,7 @@ public class GUI extends Application {
                                     //ListView and Preview buttons are connected by index
                                     int indexInLV = addressValues.size();
 
-                                    Platform.runLater(() -> {
-                                        addressValues.add(selectedFile);
-                                    });
+                                    Platform.runLater(() -> addressValues.add(selectedFile));
 
                                     Button previewButton = new Button(selectedFile.getName(), imageView);
                                     previewButton.setMaxSize(WIDTH, HEIGHT);
@@ -418,9 +428,9 @@ public class GUI extends Application {
         centerGrid.getRowConstraints().setAll(rCons0, rCons1, rCons2);
         centerGrid.setPadding(new Insets(0, 0, 10, 0));
 
-        centerGrid.add(new Label("Хеш сумма"), 0, 0);
+        centerGrid.add(new Label(guiBundle.getString("hashLabel")), 0, 0);
         centerGrid.add(duplChSumListView, 0, 1);
-        centerGrid.add(new Label("Превью"), 1, 0);
+        centerGrid.add(new Label(guiBundle.getString("previewLabel")), 1, 0);
         centerGrid.add(previewScrP, 1, 1);
         centerGrid.add(addressListLView,0,2,2,1);
 
@@ -429,11 +439,11 @@ public class GUI extends Application {
         pbDel.setManaged(false);
         pbDel.setMaxWidth(Double.MAX_VALUE);
 
-        Button toSetupBut = new Button("Настройки");
-        Button toRuntimeBut = new Button("Статистика");
+        Button toSetupBut = new Button(guiBundle.getString("setupButton"));
+        Button toRuntimeBut = new Button(guiBundle.getString("runtimeButton"));
         toSetupBut.setOnAction(event -> switchScene(setupScene));
         toRuntimeBut.setOnAction(event -> switchScene(runtimeScene));
-        Button deleteButton = new Button("Удалить");
+        Button deleteButton = new Button(guiBundle.getString("deleteButton"));
         deleteButton.setOnAction(event -> {
             Function<Collection<File>, TextArea> colToTAFunction = files -> {
                 StringJoiner sj = new StringJoiner("\n");
@@ -441,12 +451,13 @@ public class GUI extends Application {
                 return new TextArea(sj.toString());
             };
 
-            DeleteFilesTask delTask = new DeleteFilesTask(new ArrayList<>(filesToDelete));
+            DeleteFilesTask delTask = new DeleteFilesTask(exceptionBundle, new ArrayList<>(filesToDelete));
 
             Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-            alert.setTitle("Подтвердите удаление");
-            alert.setHeaderText("Выбрано на удаление файлов: " + filesToDelete.size() + ". " +
-                    "Так же будут удалены пустые папки. Это необратимая операция. Удалить?");
+            alert.setTitle(guiBundle.getString("delConformAlertTitle"));
+            alert.setHeaderText(guiBundle.getString("delConformAlertBodyPart1") +
+                                filesToDelete.size() +
+                                guiBundle.getString("delConformAlertBodyPart2"));
             alert.getDialogPane().setExpandableContent(colToTAFunction.apply(filesToDelete));
 
             resizeAlertManually(alert);
@@ -461,11 +472,11 @@ public class GUI extends Application {
                         try {
                             List<File> notDeletedList = delTask.get();
                             if (!notDeletedList.isEmpty()) {
-                                reportAlert.setHeaderText("Некоторые файлы не удалось удалить.");
+                                reportAlert.setHeaderText(guiBundle.getString("reportAlertHeaderFail"));
                                 reportAlert.getDialogPane().setExpandableContent(
                                         colToTAFunction.apply(notDeletedList));
                             } else {
-                                reportAlert.setHeaderText("Удаление успешно выполнено.");
+                                reportAlert.setHeaderText(guiBundle.getString("reportAlertHeaderSuccess"));
                             }
                         } catch (InterruptedException | ExecutionException e) {
                             showException(e);
@@ -518,13 +529,13 @@ public class GUI extends Application {
         long h = (millis / (1000 * 60 * 60)) % 60;
 
         if (millis >= 1000 * 60 * 60) {
-            result = String.format("%d ч %2d м %2d с %3d мс", h, m, s, ms);
+            result = String.format(messagesBundle.getString("h_m_s_ms"), h, m, s, ms);
         } else if (millis >= 1000 * 60) {
-            result = String.format("%2d м %2d с %3d мс", m, s, ms);
+            result = String.format(messagesBundle.getString("m_s_ms"), m, s, ms);
         } else if (millis >= 1000) {
-            result = String.format("%2d с %3d мс", s, ms);
+            result = String.format(messagesBundle.getString("s_ms"), s, ms);
         } else {
-            result = String.format("%3d мс", ms);
+            result = String.format(messagesBundle.getString("ms"), ms);
         }
         return result;
     }
@@ -561,12 +572,14 @@ public class GUI extends Application {
     }
 
     private void showException(Exception ex) {
+        ex.printStackTrace();
+
         StringWriter stringWriter = new StringWriter();
         ex.printStackTrace(new PrintWriter(stringWriter));
 
         Platform.runLater(() -> {
             Alert exAlert = new Alert(Alert.AlertType.ERROR);
-            exAlert.setHeaderText("При выполнении возникло исключение:" + "\n" + ex.toString());
+            exAlert.setHeaderText(guiBundle.getString("exceptionAlertHeader") + "\n" + ex.toString());
             exAlert.getDialogPane().setExpandableContent(new TextArea(stringWriter.toString()));
             resizeAlertManually(exAlert);
 

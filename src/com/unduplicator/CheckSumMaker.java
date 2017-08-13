@@ -3,25 +3,28 @@ package com.unduplicator;
 import java.io.*;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ResourceBundle;
 
 /**
  * <p>Created by MontolioV on 30.05.17.
  */
 public class CheckSumMaker {
+    private ResourceBundle exceptionBundle;
     private final MessageDigest MESSAGE_DIGEST;
 
-    public CheckSumMaker(String mdAlgorithm) {
+    public CheckSumMaker(ResourceBundle exceptionBundle, String mdAlgorithm) {
+        this.exceptionBundle = exceptionBundle;
         try {
             this.MESSAGE_DIGEST = MessageDigest.getInstance(mdAlgorithm);
         } catch (NoSuchAlgorithmException e) {
             e.printStackTrace();
-            throw new IllegalArgumentException("Choose another hash algorithm.", e);
+            throw new IllegalArgumentException(exceptionBundle.getString("noSuchHashAlgorithm"), e);
         }
     }
 
     public String makeCheckSum(File file) throws IOException {
         if (file.length() == 0) {
-            throw new IOException("File is empty.\t" + file.toString());
+            throw new IOException(exceptionBundle.getString("fileIsEmpty") + "\t" + file.toString());
         }
         try (BufferedInputStream buffIS = new BufferedInputStream(new FileInputStream(file))) {
             byte[] bytes = new byte[1024];
@@ -37,7 +40,7 @@ public class CheckSumMaker {
             return sb.toString();
 
         } catch (IOException e) {
-            throw new IOException("Couldn't make checksum cause of IO trouble\t" +
+            throw new IOException(exceptionBundle.getString("hashingFail") + "\t" +
                     file.getAbsolutePath(), e);
         }
     }

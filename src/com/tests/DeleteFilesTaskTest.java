@@ -3,7 +3,6 @@ package com.tests;
 import com.unduplicator.DeleteFilesTask;
 import javafx.application.Platform;
 import javafx.embed.swing.JFXPanel;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -53,7 +52,7 @@ public class DeleteFilesTaskTest {
         assertTrue(mainDir.listFiles().length > 0);
         assertTrue(brch1.listFiles().length == 0);
 
-        DeleteFilesTask delTask = new DeleteFilesTask(fileAL);
+        DeleteFilesTask delTask = new DeleteFilesTask(ResourseBundles.EXCEPTIONS_EN.getResourceBundle(), fileAL);
         assertEquals(-1, delTask.getProgress(), 0.001);
         delTask.run();
         Platform.runLater(() -> assertEquals(1, delTask.getProgress(), 0.001));

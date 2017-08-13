@@ -15,7 +15,7 @@ public class CheckSumMakerTest {
     private TestMatEnum fileCopyBad;
 
     public CheckSumMakerTest() throws NoSuchAlgorithmException {
-        checkSumMaker = new CheckSumMaker("SHA-256");
+        checkSumMaker = new CheckSumMaker(ResourseBundles.EXCEPTIONS_EN.getResourceBundle(), "SHA-256");
         fileControl = TestMatEnum.ROOT_CONTROL;
         fileCopyGood = TestMatEnum.INNER_COPY_GOOD;
         fileCopyBad = TestMatEnum.ROOT_COPY_BAD;

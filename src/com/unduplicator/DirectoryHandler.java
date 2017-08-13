@@ -9,6 +9,8 @@ import java.util.concurrent.*;
  * <p>Created by MontolioV on 06.06.17.
  */
 public class DirectoryHandler extends RecursiveAction {
+    private ResourceBundle messagesBundle;
+    private ResourceBundle exceptionBundle;
     private final File DIRECTORY;
     private final CheckSumMaker CHECKSUM_MAKER;
     private final ConcurrentLinkedQueue<FileAndChecksum> QUEUE_FILE_AND_CHECKSUM;
@@ -19,13 +21,17 @@ public class DirectoryHandler extends RecursiveAction {
     public DirectoryHandler(File directory,
                             String hashAlgorithm,
                             ConcurrentLinkedQueue<FileAndChecksum> queueProcessed,
-                            ConcurrentLinkedQueue<String> queueExMessages)
+                            ConcurrentLinkedQueue<String> queueExMessages,
+                            ResourceBundle messagesBundle,
+                            ResourceBundle exceptionBundle)
     {
-        this.CHECKSUM_MAKER = new CheckSumMaker(hashAlgorithm);
+        this.CHECKSUM_MAKER = new CheckSumMaker(exceptionBundle, hashAlgorithm);
         this.DIRECTORY = directory;
         this.QUEUE_FILE_AND_CHECKSUM = queueProcessed;
         this.HASH_ALGORITHM = hashAlgorithm;
         this.QUEUE_EX_MESSAGES = queueExMessages;
+        this.messagesBundle = messagesBundle;
+        this.exceptionBundle = exceptionBundle;
     }
 
     /**
@@ -33,25 +39,29 @@ public class DirectoryHandler extends RecursiveAction {
      */
     @Override
     protected void compute() {
-        if (DIRECTORY.listFiles() == null) {
-            if (DIRECTORY.isFile()) {
-                processFile(DIRECTORY);
+        if (DIRECTORY.isFile()) {
+            processFile(DIRECTORY);
+        } else if (DIRECTORY.isDirectory()) {
+            if (DIRECTORY.listFiles() == null) {
+                QUEUE_EX_MESSAGES.offer(messagesBundle.getString("cantGetFilesFromDir") + "\t" + DIRECTORY.toString());
             } else {
-                QUEUE_EX_MESSAGES.offer("Not a folder, not a file. Maybe I/O trouble. \n" + DIRECTORY.toString());
-            }
-        } else {
-            for (File fileFromDir : DIRECTORY.listFiles()) {
-                if (fileFromDir.isDirectory()) {
-                    DirectoryHandler task = new DirectoryHandler(fileFromDir,
-                            HASH_ALGORITHM,
-                            QUEUE_FILE_AND_CHECKSUM,
-                            QUEUE_EX_MESSAGES);
-                    task.fork();
-                    tasks.add(task);
-                } else {
-                    processFile(fileFromDir);
+                for (File fileFromDir : DIRECTORY.listFiles()) {
+                    if (fileFromDir.isFile()) {
+                        processFile(fileFromDir);
+                    } else {
+                        DirectoryHandler task = new DirectoryHandler(fileFromDir,
+                                                                     HASH_ALGORITHM,
+                                                                     QUEUE_FILE_AND_CHECKSUM,
+                                                                     QUEUE_EX_MESSAGES,
+                                                                     messagesBundle,
+                                                                     exceptionBundle);
+                        task.fork();
+                        tasks.add(task);
+                    }
                 }
             }
+        } else {
+            QUEUE_EX_MESSAGES.offer(messagesBundle.getString("notFileNotDir") + "\t" + DIRECTORY.toString());
         }
 
         tasks.forEach(ForkJoinTask::join);

@@ -7,11 +7,13 @@ import java.nio.file.NoSuchFileException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.ResourceBundle;
 
 /**
  * <p>Created by MontolioV on 12.07.17.
  */
 public class DeleteFilesTask extends Task<List<File>> {
+    private ResourceBundle exceptionBundle;
     private List<File> fileList;
     private ArrayList<File> dirsToDelete = new ArrayList<>();
     private List<File> notDeletedFileList = new ArrayList<>();
@@ -19,8 +21,9 @@ public class DeleteFilesTask extends Task<List<File>> {
     /**
      * Creates a new Task.
      */
-    public DeleteFilesTask(List<File> fileList) {
+    public DeleteFilesTask(ResourceBundle exceptionBundle, List<File> fileList) {
         super();
+        this.exceptionBundle = exceptionBundle;
         this.fileList = fileList;
     }
 
@@ -43,7 +46,7 @@ public class DeleteFilesTask extends Task<List<File>> {
         counter = 0;
         for (File file : fileList) {
             if (file.getParentFile() == null) {
-                throw new NoSuchFileException("Hasn't got parent: " + file.toString());
+                throw new NoSuchFileException(exceptionBundle.getString("hasNoParent") + "\t" + file.toString());
             } else {
                 deleteOnlyEmptyDir(file.getParentFile());
             }
