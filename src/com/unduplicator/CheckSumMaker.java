@@ -26,22 +26,32 @@ public class CheckSumMaker {
         if (file.length() == 0) {
             throw new IOException(exceptionBundle.getString("fileIsEmpty") + "\t" + file.toString());
         }
-        try (BufferedInputStream buffIS = new BufferedInputStream(new FileInputStream(file))) {
-            byte[] bytes = new byte[1024];
-            while (buffIS.read(bytes) > 0) {
-                MESSAGE_DIGEST.update(bytes);
-            }
-            byte[] bCheckSum = MESSAGE_DIGEST.digest();
 
-            StringBuilder sb = new StringBuilder();
-            for (byte b : bCheckSum) {
-                sb.append(String.format("%02x", b));
-            }
-            return sb.toString();
+        byte[] bytesHash = makeBytesHash(file);
+        return stringRepresentation(bytesHash);
+    }
 
+    private byte[] makeBytesHash(File file) throws IOException {
+        try (BufferedInputStream bufferedIS = new BufferedInputStream(new FileInputStream(file))) {
+            byte[] digestBuffer = new byte[1024];
+            int inputStreamResponse = bufferedIS.read(digestBuffer);
+
+            while (inputStreamResponse > -1) {
+                MESSAGE_DIGEST.update(digestBuffer);
+                inputStreamResponse = bufferedIS.read(digestBuffer);
+            }
+            return MESSAGE_DIGEST.digest();
         } catch (IOException e) {
             throw new IOException(exceptionBundle.getString("hashingFail") + "\t" +
                     file.getAbsolutePath(), e);
         }
+    }
+
+    private String stringRepresentation(byte[] bytes) {
+        StringBuilder sb = new StringBuilder();
+        for (byte b : bytes) {
+            sb.append(String.format("%02x", b));
+        }
+        return sb.toString();
     }
 }
