@@ -45,12 +45,12 @@ public class ResourcesProvider {
         }
     }
 
-    protected void setBundlesLocale(Locale locale) {
+    public void setBundlesLocale(Locale locale) {
         currentLocal = locale;
 
         readWriteLock.writeLock().lock();
 
-        ResourceBundle exceptionsBundle = ResourceBundle.getBundle("com.resources.GUI_Bundle", locale);
+        ResourceBundle exceptionsBundle = ResourceBundle.getBundle("com.resources.Exception_Bundle", locale);
         ResourceBundle guiBundle = ResourceBundle.getBundle("com.resources.GUI_Bundle", locale);
         ResourceBundle messagesBundle = ResourceBundle.getBundle("com.resources.Messages_Bundle", locale);
         bundles.put("exceptions", exceptionsBundle);
@@ -58,6 +58,8 @@ public class ResourcesProvider {
         bundles.put("messages", messagesBundle);
 
         readWriteLock.writeLock().unlock();
+
+        saveLocale();
     }
 
     public String getStrFromBundle(String bundleName, String stringKey) {

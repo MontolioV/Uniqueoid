@@ -13,17 +13,16 @@ import java.util.ResourceBundle;
  * <p>Created by MontolioV on 12.07.17.
  */
 public class DeleteFilesTask extends Task<List<File>> {
-    private ResourceBundle exceptionBundle;
     private List<File> fileList;
     private ArrayList<File> dirsToDelete = new ArrayList<>();
     private List<File> notDeletedFileList = new ArrayList<>();
+    private ResourcesProvider resProvider = ResourcesProvider.getInstance();
 
     /**
      * Creates a new Task.
      */
-    public DeleteFilesTask(ResourceBundle exceptionBundle, List<File> fileList) {
+    public DeleteFilesTask(List<File> fileList) {
         super();
-        this.exceptionBundle = exceptionBundle;
         this.fileList = fileList;
     }
 
@@ -46,7 +45,9 @@ public class DeleteFilesTask extends Task<List<File>> {
         counter = 0;
         for (File file : fileList) {
             if (file.getParentFile() == null) {
-                throw new NoSuchFileException(exceptionBundle.getString("hasNoParent") + "\t" + file.toString());
+                throw new NoSuchFileException(
+                        resProvider.getStrFromExceptionBundle("hasNoParent") +
+                        "\t" + file.toString());
             } else {
                 deleteOnlyEmptyDir(file.getParentFile());
             }

@@ -1,4 +1,6 @@
+*.ser
 
 .idea/
 out/
+
 Unduplicator.iml

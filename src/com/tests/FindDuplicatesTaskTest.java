@@ -38,7 +38,7 @@ public class FindDuplicatesTaskTest {
     @Test
     public void call() throws Exception {
         HashMap<String, List<File>> result;
-        task = new FindDuplicatesTask(dirList, algorithm, ResourseBundles.MESSAGES_EN.getResourceBundle(), ResourseBundles.EXCEPTIONS_EN.getResourceBundle());
+        task = new FindDuplicatesTask(dirList, algorithm);
 
         //Prepare control hashmap
         HashMap<String, List<File>> control = new HashMap<>();
@@ -70,8 +70,7 @@ public class FindDuplicatesTaskTest {
         for (int i = 0; i < 10_000; i++) {
             dirList.add(new File("test_mat"));
         }
-        task = new FindDuplicatesTask(dirList, algorithm,
-                ResourseBundles.MESSAGES_EN.getResourceBundle(), ResourseBundles.EXCEPTIONS_EN.getResourceBundle());
+        task = new FindDuplicatesTask(dirList, algorithm);
 
         Thread trd = new Thread(() -> task.run());
         trd.start();
@@ -89,9 +88,7 @@ public class FindDuplicatesTaskTest {
     public void countFiles() throws Exception {
         int result = 0;
         for (File file : dirList) {
-            result += new FindDuplicatesTask(dirList, algorithm,
-                    ResourseBundles.MESSAGES_EN.getResourceBundle(), ResourseBundles.EXCEPTIONS_EN.getResourceBundle())
-                    .countFiles(file);
+            result += new FindDuplicatesTask(dirList, algorithm).countFiles(file);
         }
 
         assertEquals(7, result);

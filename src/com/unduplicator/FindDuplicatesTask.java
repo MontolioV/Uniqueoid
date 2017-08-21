@@ -12,20 +12,16 @@ import java.util.concurrent.*;
  * <p>Created by MontolioV on 12.06.17.
  */
 public class FindDuplicatesTask extends Task<HashMap<String, List<File>>> {
-    private ResourceBundle messagesBundle;
-    private ResourceBundle exceptionBundle;
     private final List<File> DIRECTORIES;
     private final String HASH_ALGORITHM;
     private int filesCounter = 0;
     private int filesTotal = 0;
+    private ResourcesProvider resProvider = ResourcesProvider.getInstance();
 
-    public FindDuplicatesTask(List<File> directories, String hash_algorithm, ResourceBundle messagesBundle, ResourceBundle exceptionBundle) {
+    public FindDuplicatesTask(List<File> directories, String hash_algorithm) {
         super();
         this.DIRECTORIES = directories;
         HASH_ALGORITHM = hash_algorithm;
-
-        this.messagesBundle = messagesBundle;
-        this.exceptionBundle = exceptionBundle;
     }
 
     /**
@@ -47,18 +43,16 @@ public class FindDuplicatesTask extends Task<HashMap<String, List<File>>> {
         HashMap<String, List<File>> result = new HashMap<>();
         ForkJoinPool fjPool = new ForkJoinPool();
 
-        updateMessage(messagesBundle.getString("countFiles"));
+        updateMessage(resProvider.getStrFromMessagesBundle("countFiles"));
         DIRECTORIES.forEach(dir -> filesTotal += countFiles(dir));
-        updateMessage(messagesBundle.getString("totalFiles") + filesTotal);
+        updateMessage(resProvider.getStrFromMessagesBundle("totalFiles") + filesTotal);
 
         Thread fjThread = new Thread(() -> {
             ArrayList<DirectoryHandler> taskList = new ArrayList<>();
             DIRECTORIES.forEach(file -> taskList.add(new DirectoryHandler(file,
                                                      HASH_ALGORITHM,
                                                      queueProcessed,
-                                                     queueExMessages,
-                                                     messagesBundle,
-                                                     exceptionBundle)));
+                                                     queueExMessages)));
             taskList.forEach(fjPool::execute);
             taskList.forEach((directoryHandler) -> {
                 try {
@@ -122,7 +116,8 @@ public class FindDuplicatesTask extends Task<HashMap<String, List<File>>> {
         } else {
             if (dir.isDirectory()) {
                 if (dir.listFiles() == null) {
-                    updateMessage(messagesBundle.getString("countFail") + "\t" + dir.toString());
+                    updateMessage(resProvider.getStrFromMessagesBundle("countFail") +
+                                  "\t" + dir.toString());
                 } else {
                     for (File file : dir.listFiles()) {
                         if (file.isDirectory()) {

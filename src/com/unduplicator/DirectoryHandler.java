@@ -9,29 +9,24 @@ import java.util.concurrent.*;
  * <p>Created by MontolioV on 06.06.17.
  */
 public class DirectoryHandler extends RecursiveAction {
-    private ResourceBundle messagesBundle;
-    private ResourceBundle exceptionBundle;
     private final File DIRECTORY;
     private final CheckSumMaker CHECKSUM_MAKER;
     private final ConcurrentLinkedQueue<FileAndChecksum> QUEUE_FILE_AND_CHECKSUM;
     private final ConcurrentLinkedQueue<String> QUEUE_EX_MESSAGES;
     private final String HASH_ALGORITHM;
     private ArrayList<DirectoryHandler> tasks = new ArrayList<>();
+    private ResourcesProvider resProvider = ResourcesProvider.getInstance();
 
     public DirectoryHandler(File directory,
                             String hashAlgorithm,
                             ConcurrentLinkedQueue<FileAndChecksum> queueProcessed,
-                            ConcurrentLinkedQueue<String> queueExMessages,
-                            ResourceBundle messagesBundle,
-                            ResourceBundle exceptionBundle)
-    {
-        this.CHECKSUM_MAKER = new CheckSumMaker(exceptionBundle, hashAlgorithm);
+                            ConcurrentLinkedQueue<String> queueExMessages) {
+
+        this.CHECKSUM_MAKER = new CheckSumMaker(hashAlgorithm);
         this.DIRECTORY = directory;
         this.QUEUE_FILE_AND_CHECKSUM = queueProcessed;
         this.HASH_ALGORITHM = hashAlgorithm;
         this.QUEUE_EX_MESSAGES = queueExMessages;
-        this.messagesBundle = messagesBundle;
-        this.exceptionBundle = exceptionBundle;
     }
 
     /**
@@ -43,7 +38,9 @@ public class DirectoryHandler extends RecursiveAction {
             processFile(DIRECTORY);
         } else if (DIRECTORY.isDirectory()) {
             if (DIRECTORY.listFiles() == null) {
-                QUEUE_EX_MESSAGES.offer(messagesBundle.getString("cantGetFilesFromDir") + "\t" + DIRECTORY.toString());
+                QUEUE_EX_MESSAGES.offer(
+                        resProvider.getStrFromMessagesBundle("cantGetFilesFromDir") +
+                        "\t" + DIRECTORY.toString());
             } else {
                 for (File fileFromDir : DIRECTORY.listFiles()) {
                     if (fileFromDir.isFile()) {
@@ -52,16 +49,16 @@ public class DirectoryHandler extends RecursiveAction {
                         DirectoryHandler task = new DirectoryHandler(fileFromDir,
                                                                      HASH_ALGORITHM,
                                                                      QUEUE_FILE_AND_CHECKSUM,
-                                                                     QUEUE_EX_MESSAGES,
-                                                                     messagesBundle,
-                                                                     exceptionBundle);
+                                                                     QUEUE_EX_MESSAGES);
                         task.fork();
                         tasks.add(task);
                     }
                 }
             }
         } else {
-            QUEUE_EX_MESSAGES.offer(messagesBundle.getString("notFileNotDir") + "\t" + DIRECTORY.toString());
+            QUEUE_EX_MESSAGES.offer(
+                    resProvider.getStrFromMessagesBundle("notFileNotDir") +
+                    "\t" + DIRECTORY.toString());
         }
 
         tasks.forEach(ForkJoinTask::join);

@@ -32,11 +32,7 @@ import java.util.function.Function;
  * <p>Created by MontolioV on 20.06.17.
  */
 public class GUI extends Application {
-//    private Locale locale = new Locale("ru", "RU");
-    private Locale locale = new Locale("en", "EN");
-    private ResourceBundle guiBundle;
-    private ResourceBundle messagesBundle;
-    private ResourceBundle exceptionBundle;
+    private ResourcesProvider resProvider = ResourcesProvider.getInstance();
 
     private HashMap<String, List<File>> processedFilesHM = new HashMap<>();
     private FindDuplicatesTask task;
@@ -59,33 +55,6 @@ public class GUI extends Application {
     }
 
     @Override
-    public void init() throws Exception {
-        super.init();
-
-        File settings = new File(System.getProperty("user.dir") + "/settings.ser");
-        String language;
-        String country;
-
-        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(settings))) {
-            language = (String) ois.readObject();
-            country = (String) ois.readObject();
-            locale = new Locale(language, country);
-        }catch (IOException | ClassNotFoundException e) {
-            e.printStackTrace();
-        }
-
-        guiBundle = ResourceBundle.getBundle("com.resources.GUI_Bundle", locale);
-        messagesBundle = ResourceBundle.getBundle("com.resources.Messages_Bundle", locale);
-        exceptionBundle = ResourceBundle.getBundle("com.resources.Exception_Bundle", locale);
-    }
-
-    @Override
-    public void stop() throws Exception {
-        super.stop();
-
-    }
-
-    @Override
     public void start(Stage primaryStage) {
         mainStage = primaryStage;
 
@@ -99,10 +68,10 @@ public class GUI extends Application {
 
     private void makeSetupScene() {
         final List<File> targetDirs = new ArrayList<>();
-        startBut = new Button(guiBundle.getString("startButton"));
+        startBut = new Button(resProvider.getStrFromGUIBundle("startButton"));
 
         //Display
-        Label headerLabel = new Label(guiBundle.getString("headerLabel"));
+        Label headerLabel = new Label(resProvider.getStrFromGUIBundle("headerLabel"));
         Label showDirLabel = new Label("");
 
         VBox innerBox = new VBox(headerLabel);
@@ -116,12 +85,12 @@ public class GUI extends Application {
                 showDirLabel);
 
         //Setting buttons
-        Label algorithmLabel = new Label(guiBundle.getString("algorithmLabel"));
+        Label algorithmLabel = new Label(resProvider.getStrFromGUIBundle("algorithmLabel"));
         ComboBox<String> algorithmCB = new ComboBox<>(FXCollections.observableArrayList(
                 "MD5", "SHA-1", "SHA-256"));
         algorithmCB.getSelectionModel().selectLast();
 
-        Button addDirectory = new Button(guiBundle.getString("addDirectoryButton"));
+        Button addDirectory = new Button(resProvider.getStrFromGUIBundle("addDirectoryButton"));
         addDirectory.setOnAction(event -> {
             DirectoryChooser dirChooser = new DirectoryChooser();
             File dir = dirChooser.showDialog(mainStage);
@@ -131,7 +100,7 @@ public class GUI extends Application {
                 targetDirs.add(dir);
             }
         });
-        Button addFile = new Button(guiBundle.getString("addFileButton"));
+        Button addFile = new Button(resProvider.getStrFromGUIBundle("addFileButton"));
         addFile.setOnAction(event -> {
             FileChooser fileChooser = new FileChooser();
             File file = fileChooser.showOpenDialog(mainStage);
@@ -141,7 +110,7 @@ public class GUI extends Application {
                 targetDirs.add(file);
             }
         });
-        Button clearDirs = new Button(guiBundle.getString("clearDirsButton"));
+        Button clearDirs = new Button(resProvider.getStrFromGUIBundle("clearDirsButton"));
         clearDirs.setOnAction(event -> {
             targetDirs.clear();
             showDirLabel.setText("");
@@ -170,7 +139,7 @@ public class GUI extends Application {
             long startTime = System.currentTimeMillis();
             messagesTA.clear();
             processedFilesHM = null;
-            task = new FindDuplicatesTask(targetDirs, algorithmCB.getValue(), messagesBundle, exceptionBundle);
+            task = new FindDuplicatesTask(targetDirs, algorithmCB.getValue());
             progressBar.progressProperty().bind(task.progressProperty());
             poolStatus.textProperty().bind(task.titleProperty());
             task.messageProperty().addListener((observable, oldValue, newValue) -> {
@@ -186,12 +155,12 @@ public class GUI extends Application {
                         break;
                     case RUNNING:
                         swapMode(true);
-                        messagesTA.appendText("\n" + messagesBundle.getString("taskProcessing"));
+                        messagesTA.appendText("\n" + resProvider.getStrFromMessagesBundle("taskProcessing"));
                         break;
                     case SUCCEEDED:
                         long durationMS = System.currentTimeMillis() - startTime;
                         swapMode(false);
-                        messagesTA.appendText("\n" + messagesBundle.getString("completeSuccessfully") + millisToTimeStr(durationMS));
+                        messagesTA.appendText("\n" + resProvider.getStrFromMessagesBundle("completeSuccessfully") + millisToTimeStr(durationMS));
                         if (processedFilesHM != null) {
                             int duplCount = 0;
                             for (Map.Entry<String, List<File>> entry : processedFilesHM.entrySet()) {
@@ -199,16 +168,16 @@ public class GUI extends Application {
                                     duplCount += entry.getValue().size() - 1;
                                 }
                             }
-                            messagesTA.appendText("\n" + messagesBundle.getString("foundDuplicates") + duplCount);
+                            messagesTA.appendText("\n" + resProvider.getStrFromMessagesBundle("foundDuplicates") + duplCount);
                         }
                         break;
                     case CANCELLED:
                         swapMode(false);
-                        messagesTA.appendText("\n" + messagesBundle.getString("canceled"));
+                        messagesTA.appendText("\n" + resProvider.getStrFromMessagesBundle("canceled"));
                         break;
                     case FAILED:
                         swapMode(false);
-                        messagesTA.appendText("\n" + messagesBundle.getString("error"));
+                        messagesTA.appendText("\n" + resProvider.getStrFromMessagesBundle("error"));
                         break;
                 }
             });
@@ -237,7 +206,7 @@ public class GUI extends Application {
     }
 
     private void makeRuntimeScene() {
-        stopBut = new Button(guiBundle.getString("cancelButton"));
+        stopBut = new Button(resProvider.getStrFromGUIBundle("cancelButton"));
 
         progressBar.setMaxWidth(Double.MAX_VALUE);
         poolStatus.setMaxWidth(Double.MAX_VALUE);
@@ -245,8 +214,8 @@ public class GUI extends Application {
         messagesTA.setEditable(false);
         messagesTA.setWrapText(true);
 
-        Button toSetupBut = new Button(guiBundle.getString("setupButton"));
-        Button toResultBut = new Button(guiBundle.getString("resultButton"));
+        Button toSetupBut = new Button(resProvider.getStrFromGUIBundle("setupButton"));
+        Button toResultBut = new Button(resProvider.getStrFromGUIBundle("resultButton"));
 
         toSetupBut.setOnAction(event -> switchScene(setupScene));
         toResultBut.setOnAction(event -> switchScene(resultScene));
@@ -428,9 +397,9 @@ public class GUI extends Application {
         centerGrid.getRowConstraints().setAll(rCons0, rCons1, rCons2);
         centerGrid.setPadding(new Insets(0, 0, 10, 0));
 
-        centerGrid.add(new Label(guiBundle.getString("hashLabel")), 0, 0);
+        centerGrid.add(new Label(resProvider.getStrFromGUIBundle("hashLabel")), 0, 0);
         centerGrid.add(duplChSumListView, 0, 1);
-        centerGrid.add(new Label(guiBundle.getString("previewLabel")), 1, 0);
+        centerGrid.add(new Label(resProvider.getStrFromGUIBundle("previewLabel")), 1, 0);
         centerGrid.add(previewScrP, 1, 1);
         centerGrid.add(addressListLView,0,2,2,1);
 
@@ -439,11 +408,11 @@ public class GUI extends Application {
         pbDel.setManaged(false);
         pbDel.setMaxWidth(Double.MAX_VALUE);
 
-        Button toSetupBut = new Button(guiBundle.getString("setupButton"));
-        Button toRuntimeBut = new Button(guiBundle.getString("runtimeButton"));
+        Button toSetupBut = new Button(resProvider.getStrFromGUIBundle("setupButton"));
+        Button toRuntimeBut = new Button(resProvider.getStrFromGUIBundle("runtimeButton"));
         toSetupBut.setOnAction(event -> switchScene(setupScene));
         toRuntimeBut.setOnAction(event -> switchScene(runtimeScene));
-        Button deleteButton = new Button(guiBundle.getString("deleteButton"));
+        Button deleteButton = new Button(resProvider.getStrFromGUIBundle("deleteButton"));
         deleteButton.setOnAction(event -> {
             Function<Collection<File>, TextArea> colToTAFunction = files -> {
                 StringJoiner sj = new StringJoiner("\n");
@@ -451,13 +420,13 @@ public class GUI extends Application {
                 return new TextArea(sj.toString());
             };
 
-            DeleteFilesTask delTask = new DeleteFilesTask(exceptionBundle, new ArrayList<>(filesToDelete));
+            DeleteFilesTask delTask = new DeleteFilesTask(new ArrayList<>(filesToDelete));
 
             Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-            alert.setTitle(guiBundle.getString("delConformAlertTitle"));
-            alert.setHeaderText(guiBundle.getString("delConformAlertBodyPart1") +
+            alert.setTitle(resProvider.getStrFromGUIBundle("delConformAlertTitle"));
+            alert.setHeaderText(resProvider.getStrFromGUIBundle("delConformAlertBodyPart1") +
                                 filesToDelete.size() +
-                                guiBundle.getString("delConformAlertBodyPart2"));
+                                resProvider.getStrFromGUIBundle("delConformAlertBodyPart2"));
             alert.getDialogPane().setExpandableContent(colToTAFunction.apply(filesToDelete));
 
             resizeAlertManually(alert);
@@ -472,11 +441,11 @@ public class GUI extends Application {
                         try {
                             List<File> notDeletedList = delTask.get();
                             if (!notDeletedList.isEmpty()) {
-                                reportAlert.setHeaderText(guiBundle.getString("reportAlertHeaderFail"));
+                                reportAlert.setHeaderText(resProvider.getStrFromGUIBundle("reportAlertHeaderFail"));
                                 reportAlert.getDialogPane().setExpandableContent(
                                         colToTAFunction.apply(notDeletedList));
                             } else {
-                                reportAlert.setHeaderText(guiBundle.getString("reportAlertHeaderSuccess"));
+                                reportAlert.setHeaderText(resProvider.getStrFromGUIBundle("reportAlertHeaderSuccess"));
                             }
                         } catch (InterruptedException | ExecutionException e) {
                             showException(e);
@@ -529,13 +498,13 @@ public class GUI extends Application {
         long h = (millis / (1000 * 60 * 60)) % 60;
 
         if (millis >= 1000 * 60 * 60) {
-            result = String.format(messagesBundle.getString("h_m_s_ms"), h, m, s, ms);
+            result = String.format(resProvider.getStrFromMessagesBundle("h_m_s_ms"), h, m, s, ms);
         } else if (millis >= 1000 * 60) {
-            result = String.format(messagesBundle.getString("m_s_ms"), m, s, ms);
+            result = String.format(resProvider.getStrFromMessagesBundle("m_s_ms"), m, s, ms);
         } else if (millis >= 1000) {
-            result = String.format(messagesBundle.getString("s_ms"), s, ms);
+            result = String.format(resProvider.getStrFromMessagesBundle("s_ms"), s, ms);
         } else {
-            result = String.format(messagesBundle.getString("ms"), ms);
+            result = String.format(resProvider.getStrFromMessagesBundle("ms"), ms);
         }
         return result;
     }
@@ -579,7 +548,7 @@ public class GUI extends Application {
 
         Platform.runLater(() -> {
             Alert exAlert = new Alert(Alert.AlertType.ERROR);
-            exAlert.setHeaderText(guiBundle.getString("exceptionAlertHeader") + "\n" + ex.toString());
+            exAlert.setHeaderText(resProvider.getStrFromGUIBundle("exceptionAlertHeader") + "\n" + ex.toString());
             exAlert.getDialogPane().setExpandableContent(new TextArea(stringWriter.toString()));
             resizeAlertManually(exAlert);
 

@@ -52,7 +52,7 @@ public class DeleteFilesTaskTest {
         assertTrue(mainDir.listFiles().length > 0);
         assertTrue(brch1.listFiles().length == 0);
 
-        DeleteFilesTask delTask = new DeleteFilesTask(ResourseBundles.EXCEPTIONS_EN.getResourceBundle(), fileAL);
+        DeleteFilesTask delTask = new DeleteFilesTask(fileAL);
         assertEquals(-1, delTask.getProgress(), 0.001);
         delTask.run();
         Platform.runLater(() -> assertEquals(1, delTask.getProgress(), 0.001));

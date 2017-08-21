@@ -3,28 +3,29 @@ package com.unduplicator;
 import java.io.*;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.ResourceBundle;
 
 /**
  * <p>Created by MontolioV on 30.05.17.
  */
 public class CheckSumMaker {
-    private ResourceBundle exceptionBundle;
     private final MessageDigest MESSAGE_DIGEST;
+    private ResourcesProvider resProvider = ResourcesProvider.getInstance();
 
-    public CheckSumMaker(ResourceBundle exceptionBundle, String mdAlgorithm) {
-        this.exceptionBundle = exceptionBundle;
+    public CheckSumMaker(String mdAlgorithm) {
         try {
             this.MESSAGE_DIGEST = MessageDigest.getInstance(mdAlgorithm);
         } catch (NoSuchAlgorithmException e) {
             e.printStackTrace();
-            throw new IllegalArgumentException(exceptionBundle.getString("noSuchHashAlgorithm"), e);
+            throw new IllegalArgumentException(
+                    resProvider.getStrFromExceptionBundle("noSuchHashAlgorithm"), e);
         }
     }
 
     public String makeCheckSum(File file) throws IOException {
         if (file.length() == 0) {
-            throw new IOException(exceptionBundle.getString("fileIsEmpty") + "\t" + file.toString());
+            throw new IOException(
+                    resProvider.getStrFromExceptionBundle("fileIsEmpty") +
+                    "\t" + file.toString());
         }
 
         byte[] bytesHash = makeBytesHash(file);
@@ -42,8 +43,8 @@ public class CheckSumMaker {
             }
             return MESSAGE_DIGEST.digest();
         } catch (IOException e) {
-            throw new IOException(exceptionBundle.getString("hashingFail") + "\t" +
-                    file.getAbsolutePath(), e);
+            throw new IOException(resProvider.getStrFromExceptionBundle("hashingFail") +
+                    "\t" + file.getAbsolutePath(), e);
         }
     }
 
