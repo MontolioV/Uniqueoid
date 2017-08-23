@@ -16,6 +16,10 @@ public class FindDuplicatesTask extends Task<HashMap<String, List<File>>> {
     private final String HASH_ALGORITHM;
     private int filesCounter = 0;
     private int filesTotal = 0;
+    private ConcurrentLinkedQueue<FileAndChecksum> queueProcessed = new ConcurrentLinkedQueue<>();
+    private ConcurrentLinkedQueue<String> queueExMessages = new ConcurrentLinkedQueue<>();
+    private ForkJoinPool fjPool = new ForkJoinPool();
+    private Thread fjThread;
     private ResourcesProvider resProvider = ResourcesProvider.getInstance();
 
     public FindDuplicatesTask(List<File> directories, String hash_algorithm) {
@@ -38,21 +42,47 @@ public class FindDuplicatesTask extends Task<HashMap<String, List<File>>> {
      */
     @Override
     protected HashMap<String, List<File>> call() throws Exception {
-        ConcurrentLinkedQueue<FileAndChecksum> queueProcessed = new ConcurrentLinkedQueue<>();
-        ConcurrentLinkedQueue<String> queueExMessages = new ConcurrentLinkedQueue<>();
-        HashMap<String, List<File>> result = new HashMap<>();
-        ForkJoinPool fjPool = new ForkJoinPool();
+        preparations();
+        runTasksInNewThread();
+        return controlAndOutputResult();
+    }
 
+    private void preparations() {
         updateMessage(resProvider.getStrFromMessagesBundle("countFiles"));
         DIRECTORIES.forEach(dir -> filesTotal += countFiles(dir));
         updateMessage(resProvider.getStrFromMessagesBundle("totalFiles") + filesTotal);
+    }
 
-        Thread fjThread = new Thread(() -> {
+    public int countFiles(File dir) {
+        if (dir == null || isCancelled()) return 0;
+
+        if (dir.isDirectory()) {
+            int result = 0;
+            if (dir.listFiles() == null) {
+                updateMessage(resProvider.getStrFromMessagesBundle("countFail") +
+                        "\t" + dir.toString());
+            } else {
+                for (File file : dir.listFiles()) {
+                    if (file.isDirectory()) {
+                        result += countFiles(file);
+                    } else {
+                        result++;
+                    }
+                }
+            }
+            return result;
+        } else {
+            return 1;
+        }
+    }
+
+    private void runTasksInNewThread() {
+        fjThread = new Thread(() -> {
             ArrayList<DirectoryHandler> taskList = new ArrayList<>();
             DIRECTORIES.forEach(file -> taskList.add(new DirectoryHandler(file,
-                                                     HASH_ALGORITHM,
-                                                     queueProcessed,
-                                                     queueExMessages)));
+                    HASH_ALGORITHM,
+                    queueProcessed,
+                    queueExMessages)));
             taskList.forEach(fjPool::execute);
             taskList.forEach((directoryHandler) -> {
                 try {
@@ -64,6 +94,10 @@ public class FindDuplicatesTask extends Task<HashMap<String, List<File>>> {
             });
         });
         fjThread.start();
+    }
+
+    private HashMap<String, List<File>> controlAndOutputResult() throws InterruptedException {
+        HashMap<String, List<File>> result = new HashMap<>();
 
         while (fjThread.isAlive() || !queueProcessed.isEmpty() || !queueExMessages.isEmpty()) {
             //Cancellation
@@ -107,30 +141,5 @@ public class FindDuplicatesTask extends Task<HashMap<String, List<File>>> {
         //Just to be sure
         fjThread.join();
         return result;
-    }
-
-    public int countFiles(File dir) {
-        int result = 0;
-        if (dir == null || isCancelled()) {
-            return 0;
-        } else {
-            if (dir.isDirectory()) {
-                if (dir.listFiles() == null) {
-                    updateMessage(resProvider.getStrFromMessagesBundle("countFail") +
-                                  "\t" + dir.toString());
-                } else {
-                    for (File file : dir.listFiles()) {
-                        if (file.isDirectory()) {
-                            result += countFiles(file);
-                        } else {
-                            result++;
-                        }
-                    }
-                }
-                return result;
-            } else {
-                return 1;
-            }
-        }
     }
 }

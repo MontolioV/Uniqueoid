@@ -14,7 +14,6 @@ public class DirectoryHandler extends RecursiveAction {
     private final ConcurrentLinkedQueue<FileAndChecksum> QUEUE_FILE_AND_CHECKSUM;
     private final ConcurrentLinkedQueue<String> QUEUE_EX_MESSAGES;
     private final String HASH_ALGORITHM;
-    private ArrayList<DirectoryHandler> tasks = new ArrayList<>();
     private ResourcesProvider resProvider = ResourcesProvider.getInstance();
 
     public DirectoryHandler(File directory,
@@ -34,6 +33,8 @@ public class DirectoryHandler extends RecursiveAction {
      */
     @Override
     protected void compute() {
+        ArrayList<DirectoryHandler> tasks = new ArrayList<>();
+
         if (DIRECTORY.isFile()) {
             processFile(DIRECTORY);
         } else if (DIRECTORY.isDirectory()) {
