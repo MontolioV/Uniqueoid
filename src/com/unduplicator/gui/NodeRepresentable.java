@@ -9,7 +9,7 @@ import javafx.scene.Node;
 public interface NodeRepresentable {
 
     /**
-     *@return self representation as <tt>Node</tt>
+     * @return self representation as <tt>Node</tt>
      */
     Node getAsNode();
 }

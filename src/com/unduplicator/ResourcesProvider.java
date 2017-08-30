@@ -70,15 +70,15 @@ public class ResourcesProvider {
         return result;
     }
 
-    String getStrFromExceptionBundle(String stringKey) {
+    public String getStrFromExceptionBundle(String stringKey) {
         return getStrFromBundle("exceptions", stringKey);
     }
 
-    String getStrFromGUIBundle(String stringKey) {
+    public String getStrFromGUIBundle(String stringKey) {
         return getStrFromBundle("gui", stringKey);
     }
 
-    String getStrFromMessagesBundle(String stringKey) {
+    public String getStrFromMessagesBundle(String stringKey) {
         return getStrFromBundle("messages", stringKey);
     }
 }
