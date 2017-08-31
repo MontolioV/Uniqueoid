@@ -45,7 +45,8 @@ public class GUI extends Application{
     public void start(Stage primaryStage) throws Exception {
         this.primaryStage = primaryStage;
         chunkManager = new ChunkManager(this);
-        primaryStage.setScene(new Scene(appPane));
+        Scene mainScene = new Scene(appPane, 700, 600);
+        primaryStage.setScene(mainScene);
         primaryStage.show();
     }
 

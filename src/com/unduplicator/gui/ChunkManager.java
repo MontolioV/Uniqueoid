@@ -46,7 +46,7 @@ public class ChunkManager {
         GUI.setCenterNode(runtimeChunk.getAsNode());
     }
     protected void showResultsNode() {
-
+        GUI.setCenterNode(deleterChunk.getAsNode());
     }
     protected void showException(Exception ex) {
         GUI.showException(ex);

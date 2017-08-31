@@ -24,6 +24,7 @@ import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
@@ -36,6 +37,7 @@ public class DeleterChunk extends AbstractGUIChunk {
     private ChunkManager chunkManager;
 
     private Set<File> filesToDelete = new HashSet<>();
+    private Set<File> filesThatRemains = new HashSet<>();
     private HashMap<File, Button> fileButtonHashMap;
     private ListView<String> checksumListView;
     private ObservableList<File> fileListViewValues;
@@ -96,19 +98,11 @@ public class DeleterChunk extends AbstractGUIChunk {
     }
 
     private void makeFileListView() {
-        BiConsumer<File, String> setFilesToDeletion = (selectedFile, chSum) -> {
-            filesToDelete.remove(selectedFile);
-            chunkManager.getListCopy(chSum).stream().
-                    filter(file -> !file.equals(selectedFile)).
-                    forEach(filesToDelete::add);
-        };
         fileListViewValues = FXCollections.observableArrayList();
         fileListLView = new ListView<>(fileListViewValues);
         fileListLView.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
         fileListLView.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
-            String checksum = checksumListView.getSelectionModel().getSelectedItem();
             selectFileAndDisableButton(newValue);
-            setFilesToDeletion.accept(newValue, checksum);
         });
     }
 
@@ -125,14 +119,15 @@ public class DeleterChunk extends AbstractGUIChunk {
                 String checksum = newValue;
                 List<File> fileList = chunkManager.getListCopy(checksum);
                 fileListViewValues.clear();
+                fileButtonHashMap = new HashMap<>();
 
                 if (prevTask != null) {
                     prevTask.cancel();
                 }
                 previewPane.getChildren().clear();
 
+                ArrayList<Task<Void>> tasks = new ArrayList<>();
                 prevTask = new Task<Void>() {
-                    ArrayList<Task<Void>> tasks = new ArrayList<>();
                     AtomicBoolean stop = new AtomicBoolean();
 
                     @Override
@@ -150,6 +145,11 @@ public class DeleterChunk extends AbstractGUIChunk {
 
                             ImageView imageView = new ImageView();
                             ProgressIndicator prIndicator = new ProgressIndicator();
+                            prIndicator.progressProperty().addListener((observable1, oldValue1, newValue1) -> {
+                                if (newValue1.doubleValue() >= 1) {
+                                    prIndicator.setVisible(false);
+                                }
+                            });
                             StackPane stackPane = new StackPane(prIndicator);
 
                             Task<Void> imgTask = new Task<Void>() {
@@ -181,6 +181,8 @@ public class DeleterChunk extends AbstractGUIChunk {
                                             chunkManager.showException(e);
                                         }
                                     }
+
+                                    fileButtonHashMap.put(file, previewButton);
                                     return null;
                                 }
                             };
@@ -192,6 +194,7 @@ public class DeleterChunk extends AbstractGUIChunk {
                                 Platform.runLater(() -> previewPane.getChildren().add(stackPane));
                             }
                         }
+
                         return null;
                     }
 
@@ -204,7 +207,24 @@ public class DeleterChunk extends AbstractGUIChunk {
                     }
                 };
 
-                Thread thread = new Thread(prevTask);
+
+                Thread thread = new Thread(() -> {
+                    try {
+                        prevTask.run();
+                        prevTask.get();
+                        for (Task<Void> voidTask : tasks) {
+                            voidTask.get();
+                        }
+                    } catch (InterruptedException | ExecutionException e) {
+                        e.printStackTrace();
+                        chunkManager.showException(e);
+                    }
+                    for (File file : fileList) {
+                        if (filesThatRemains.contains(file)) {
+                            selectFileAndDisableButton(file);
+                        }
+                    }
+                });
                 thread.setDaemon(true);
                 thread.start();
             }
@@ -308,11 +328,25 @@ public class DeleterChunk extends AbstractGUIChunk {
                                           chunkManager.getChecksumSetCopy()));
     }
 
-    private void selectFileAndDisableButton(File file) {
-        previewPane.getChildren().stream()
-                .filter(Node::isDisabled)
-                .forEach(node -> node.setDisable(false));
-        fileButtonHashMap.get(file).setDisable(true);
-        fileListLView.getSelectionModel().select(file);
+    private void selectFileAndDisableButton(File selectedFile) {
+        if (selectedFile == null) return;
+        Button linkedButton = fileButtonHashMap.get(selectedFile);
+        if (linkedButton.isDisabled()) return;
+
+        fileButtonHashMap.forEach((file, button) -> button.setDisable(false));
+        linkedButton.setDisable(true);
+        fileListLView.getSelectionModel().select(selectedFile);
+
+        String checksum = checksumListView.getSelectionModel().getSelectedItem();
+        List<File> duplicatesList = chunkManager.getListCopy(checksum);
+
+        filesToDelete.remove(selectedFile);
+        filesThatRemains.add(selectedFile);
+        for (File file : duplicatesList) {
+            if (!file.equals(selectedFile)) {
+                filesToDelete.add(file);
+                filesThatRemains.remove(file);
+            }
+        }
     }
 }

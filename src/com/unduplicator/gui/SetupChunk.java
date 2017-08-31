@@ -31,7 +31,7 @@ public class SetupChunk extends AbstractGUIChunk {
     private ResourcesProvider resProvider = ResourcesProvider.getInstance();
 
     private List<File> chosenFiles = new ArrayList<>();
-    private String chosenAlgorithm;
+    private String chosenAlgorithm = "SHA-256";
 
     private Button startButton = new Button();
     private Button addDirectoryButton = new Button();
