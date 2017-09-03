@@ -81,11 +81,11 @@ public class ChunkManager {
         if (results == null) return 0;
         return results.countDuplicates();
     }
-    protected List<File> getListCopy(String checksumKey) {
-        return results.getFiles(checksumKey);
+    protected List<File> getFileListCopy(String checksumKey) {
+        return results.getFilesListCopy(checksumKey);
     }
-    protected Set<String> getChecksumSetCopy() {
-        return results.getCheckSums();
+    protected Set<String> getDuplicatesChecksumSet() {
+        return results.getDuplicateChecksumSet();
     }
 
 

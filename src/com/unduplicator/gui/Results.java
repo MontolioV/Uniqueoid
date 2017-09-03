@@ -10,9 +10,11 @@ import java.util.*;
  */
 public class Results {
     private Map<String, List<File>> processedFilesMap;
+    private Set<String> duplicateChSumSet;
 
     public Results(Map<String, List<File>> processedFilesMap) {
         this.processedFilesMap = processedFilesMap;
+        makeDuplicateSet();
     }
 
     protected int countDuplicates() {
@@ -35,13 +37,19 @@ public class Results {
             }
             processedFilesMap.replace(s, updatedList);
         });
+        makeDuplicateSet();
     }
 
-    protected List<File> getFiles(String checksumKey) {
+    private void makeDuplicateSet() {
+        duplicateChSumSet = new HashSet<>();
+        processedFilesMap.entrySet().stream().filter(entry -> entry.getValue().size() > 1).forEach(entry -> duplicateChSumSet.add(entry.getKey()));
+    }
+
+    protected List<File> getFilesListCopy(String checksumKey) {
         return new ArrayList<>(processedFilesMap.get(checksumKey));
     }
 
-    protected Set<String> getCheckSums() {
-        return new HashSet<>(processedFilesMap.keySet());
+    protected Set<String> getDuplicateChecksumSet() {
+        return duplicateChSumSet;
     }
 }

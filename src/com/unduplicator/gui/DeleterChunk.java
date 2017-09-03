@@ -10,7 +10,6 @@ import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -24,9 +23,8 @@ import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
-import java.util.concurrent.FutureTask;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.BiConsumer;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 /**
@@ -40,7 +38,6 @@ public class DeleterChunk extends AbstractGUIChunk {
     private Set<File> filesThatRemains = new HashSet<>();
     private HashMap<File, Button> fileButtonHashMap;
     private ListView<String> checksumListView;
-    private ObservableList<File> fileListViewValues;
     private ListView<File> fileListLView;
 
     private TilePane previewPane;
@@ -53,6 +50,8 @@ public class DeleterChunk extends AbstractGUIChunk {
 
     private Label hashLabel = new Label();
     private Label previewLabel = new Label();
+
+    private ProgressBar progressBar = new ProgressBar();
 
     public DeleterChunk(ChunkManager chunkManager) {
         this.chunkManager = chunkManager;
@@ -98,8 +97,7 @@ public class DeleterChunk extends AbstractGUIChunk {
     }
 
     private void makeFileListView() {
-        fileListViewValues = FXCollections.observableArrayList();
-        fileListLView = new ListView<>(fileListViewValues);
+        fileListLView = new ListView<>(FXCollections.observableArrayList());
         fileListLView.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
         fileListLView.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
             selectFileAndDisableButton(newValue);
@@ -107,7 +105,7 @@ public class DeleterChunk extends AbstractGUIChunk {
     }
 
     private void makeChecksumListView() {
-        updateChecksumListView();
+        updateDataForGUI();
         checksumListView.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
         checksumListView.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<String>() {
             private Task<Void> prevTask;
@@ -117,8 +115,9 @@ public class DeleterChunk extends AbstractGUIChunk {
             @Override
             public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
                 String checksum = newValue;
-                List<File> fileList = chunkManager.getListCopy(checksum);
-                fileListViewValues.clear();
+                List<File> fileList = chunkManager.getFileListCopy(checksum);
+                ObservableList<File> fileListViewValues = FXCollections.observableArrayList();
+                fileListLView.setItems(fileListViewValues);
                 fileButtonHashMap = new HashMap<>();
 
                 if (prevTask != null) {
@@ -129,10 +128,11 @@ public class DeleterChunk extends AbstractGUIChunk {
                 ArrayList<Task<Void>> tasks = new ArrayList<>();
                 prevTask = new Task<Void>() {
                     AtomicBoolean stop = new AtomicBoolean();
+                    AtomicInteger progress = new AtomicInteger();
 
                     @Override
                     protected Void call() throws Exception {
-                        Executor pool = Executors.newFixedThreadPool(2, r -> {
+                        Executor pool = Executors.newFixedThreadPool(4, r -> {
                             Thread daemonThr = new Thread(r);
                             daemonThr.setDaemon(true);
                             return daemonThr;
@@ -183,6 +183,7 @@ public class DeleterChunk extends AbstractGUIChunk {
                                     }
 
                                     fileButtonHashMap.put(file, previewButton);
+                                    increaseProgress();
                                     return null;
                                 }
                             };
@@ -205,8 +206,14 @@ public class DeleterChunk extends AbstractGUIChunk {
                         tasks.forEach(Task::cancel);
                         return result;
                     }
+
+                    private void increaseProgress() {
+                        updateProgress(progress.incrementAndGet(), fileList.size());
+                    }
                 };
 
+                progressBar.setManaged(true);
+                progressBar.progressProperty().bind(prevTask.progressProperty());
 
                 Thread thread = new Thread(() -> {
                     try {
@@ -215,15 +222,17 @@ public class DeleterChunk extends AbstractGUIChunk {
                         for (Task<Void> voidTask : tasks) {
                             voidTask.get();
                         }
-                    } catch (InterruptedException | ExecutionException e) {
+                    } catch (Exception e) {
                         e.printStackTrace();
                         chunkManager.showException(e);
                     }
                     for (File file : fileList) {
                         if (filesThatRemains.contains(file)) {
-                            selectFileAndDisableButton(file);
+                            Platform.runLater(() -> selectFileAndDisableButton(file));
                         }
                     }
+
+                    Platform.runLater(() -> progressBar.setManaged(false));
                 });
                 thread.setDaemon(true);
                 thread.start();
@@ -261,9 +270,9 @@ public class DeleterChunk extends AbstractGUIChunk {
     }
 
     private void makeBottomBox() {
-        ProgressBar progressBarDeletion = new ProgressBar();
-        progressBarDeletion.setManaged(false);
-        progressBarDeletion.setMaxWidth(Double.MAX_VALUE);
+        progressBar.visibleProperty().bindBidirectional(progressBar.managedProperty());
+        progressBar.setManaged(false);
+        progressBar.setMaxWidth(Double.MAX_VALUE);
 
         toSetupButton.setOnAction(event -> chunkManager.showSetupNode());
         toRuntimeButton.setOnAction(event -> chunkManager.showRuntimeStatusNode());
@@ -289,8 +298,8 @@ public class DeleterChunk extends AbstractGUIChunk {
                     .filter(response -> response == ButtonType.OK)
                     .ifPresent(type -> {
                         Alert reportAlert = new Alert(Alert.AlertType.INFORMATION);
-                        progressBarDeletion.progressProperty().bind(deletionTask.progressProperty());
-                        progressBarDeletion.setManaged(true);
+                        progressBar.progressProperty().bind(deletionTask.progressProperty());
+                        progressBar.setManaged(true);
                         deletionTask.run();
                         try {
                             List<File> notDeletedList = deletionTask.get();
@@ -305,9 +314,11 @@ public class DeleterChunk extends AbstractGUIChunk {
                             chunkManager.showException(e);
                         }
 
-                        updateChecksumListView();
-                        progressBarDeletion.setManaged(false);
+                        updateDataForGUI();
+                        progressBar.setManaged(false);
                         reportAlert.showAndWait();
+                        checksumListView.getSelectionModel().clearSelection();
+                        checksumListView.getSelectionModel().selectFirst();
                     });
         });
 
@@ -318,14 +329,16 @@ public class DeleterChunk extends AbstractGUIChunk {
         buttonsBox.setAlignment(Pos.CENTER);
 
         bottomBox = new VBox(10,
-                progressBarDeletion,
+                progressBar,
                 buttonsBox);
     }
 
-    private void updateChecksumListView() {
+    private void updateDataForGUI() {
+        filesToDelete = new HashSet<>();
+        filesThatRemains = new HashSet<>();
         chunkManager.updateResults();
         checksumListView = new ListView<>(FXCollections.observableArrayList(
-                                          chunkManager.getChecksumSetCopy()));
+                                          chunkManager.getDuplicatesChecksumSet()));
     }
 
     private void selectFileAndDisableButton(File selectedFile) {
@@ -336,9 +349,10 @@ public class DeleterChunk extends AbstractGUIChunk {
         fileButtonHashMap.forEach((file, button) -> button.setDisable(false));
         linkedButton.setDisable(true);
         fileListLView.getSelectionModel().select(selectedFile);
+        fileListLView.scrollTo(selectedFile);
 
         String checksum = checksumListView.getSelectionModel().getSelectedItem();
-        List<File> duplicatesList = chunkManager.getListCopy(checksum);
+        List<File> duplicatesList = chunkManager.getFileListCopy(checksum);
 
         filesToDelete.remove(selectedFile);
         filesThatRemains.add(selectedFile);
