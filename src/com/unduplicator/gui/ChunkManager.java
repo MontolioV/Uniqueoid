@@ -13,6 +13,7 @@ public class ChunkManager {
     private final GUI GUI;
     private Results results;
     private Set<AbstractGUIChunk> chunks = new HashSet<>();
+    private MenuBarChunk menuBarChunk;
     private SetupChunk setupChunk;
     private RuntimeStatusChunk runtimeChunk;
     private DeleterChunk deleterChunk;
@@ -21,15 +22,19 @@ public class ChunkManager {
     public ChunkManager(GUI gui) {
         GUI = gui;
         makeChunks();
+        showMenuBar();
         showSetupNode();
     }
 
     //Make chunks
     private void makeChunks() {
+        menuBarChunk = new MenuBarChunk(this);
         runtimeChunk = new RuntimeStatusChunk(this);
         setupChunk = new SetupChunk(GUI.getPrimaryStage());
+
         setupChunk.setStartButtonHandler(runtimeChunk.getStartButHandler());
 
+        chunks.add(menuBarChunk);
         chunks.add(runtimeChunk);
         chunks.add(setupChunk);
     }
@@ -39,6 +44,9 @@ public class ChunkManager {
     }
 
     //Show in GUI
+    protected void showMenuBar() {
+        GUI.setTopNode(menuBarChunk.getAsNode());
+    }
     protected void showSetupNode() {
         GUI.setCenterNode(setupChunk.getAsNode());
     }

@@ -10,6 +10,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 public class ResourcesProvider {
     private static ResourcesProvider ourInstance = new ResourcesProvider();
     private Locale currentLocal;
+    private Set<Locale> supportedLocales;
     private Map<String, ResourceBundle> bundles = new HashMap<>();
     private ReentrantReadWriteLock readWriteLock = new ReentrantReadWriteLock();
 
@@ -20,6 +21,15 @@ public class ResourcesProvider {
     private ResourcesProvider() {
         currentLocal = getSavedLocale();
         setBundlesLocale(currentLocal);
+        makeSupportedLocalesSet();
+    }
+
+    private void makeSupportedLocalesSet() {
+        Set<Locale> result = new HashSet<>();
+        result.add(new Locale("en", "EN"));
+        result.add(new Locale("ru", "RU"));
+
+        supportedLocales = Collections.unmodifiableSet(result);
     }
 
     protected Locale getSavedLocale() {
@@ -80,5 +90,13 @@ public class ResourcesProvider {
 
     public String getStrFromMessagesBundle(String stringKey) {
         return getStrFromBundle("messages", stringKey);
+    }
+
+    public Set<Locale> getSupportedLocales() {
+        return supportedLocales;
+    }
+
+    public Locale getCurrentLocal() {
+        return currentLocal;
     }
 }

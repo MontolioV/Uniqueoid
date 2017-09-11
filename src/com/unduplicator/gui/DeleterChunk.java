@@ -47,9 +47,12 @@ public class DeleterChunk extends AbstractGUIChunk {
     private Button toSetupButton = new Button();
     private Button toRuntimeButton = new Button();
     private Button deleteButton = new Button();
+    private Button chooserByParentButton = new Button();
 
     private Label hashLabel = new Label();
     private Label previewLabel = new Label();
+
+    private TextField chooserByParentTF = new TextField();
 
     private ProgressBar progressBar = new ProgressBar();
 
@@ -240,6 +243,20 @@ public class DeleterChunk extends AbstractGUIChunk {
         });
     }
 
+    private void makeChooserByParent() {
+        chooserByParentButton.setOnAction(event -> {
+            String parentToFind = chooserByParentTF.getText();
+            for (String checksum : chunkManager.getDuplicatesChecksumSet()) {
+                for (File file : chunkManager.getFileListCopy(checksum)) {
+                    if (file.getParent().equals(parentToFind)) {
+                        setToDelAllFilesExceptOne(checksum, file);
+                        break;
+                    }
+                }
+            }
+        });
+    }
+
     private void makeCenterGrid() {
         centerGrid = new GridPane();
         centerGrid.setVgap(10);
@@ -261,12 +278,16 @@ public class DeleterChunk extends AbstractGUIChunk {
         ScrollPane previewScrP = new ScrollPane(previewPane);
         previewScrP.setFitToWidth(true);
 
+        makeChooserByParent();
+        HBox chooserByParentBox = new HBox(5, chooserByParentTF, chooserByParentButton);
+        HBox.setHgrow(chooserByParentTF, Priority.ALWAYS);
+        VBox textPart = new VBox(5, fileListLView, chooserByParentBox);
 
         centerGrid.add(hashLabel, 0, 0);
         centerGrid.add(checksumListView, 0, 1);
         centerGrid.add(previewLabel, 1, 0);
         centerGrid.add(previewScrP, 1, 1);
-        centerGrid.add(fileListLView, 0, 2, 2, 1);
+        centerGrid.add(textPart, 0, 2, 2, 1);
     }
 
     private void makeBottomBox() {
@@ -317,8 +338,9 @@ public class DeleterChunk extends AbstractGUIChunk {
                         updateDataForGUI();
                         progressBar.setManaged(false);
                         reportAlert.showAndWait();
-                        checksumListView.getSelectionModel().clearSelection();
-                        checksumListView.getSelectionModel().selectFirst();
+
+                        previewPane.getChildren().clear();
+                        fileListLView.getItems().clear();
                     });
         });
 
@@ -343,6 +365,7 @@ public class DeleterChunk extends AbstractGUIChunk {
 
     private void selectFileAndDisableButton(File selectedFile) {
         if (selectedFile == null) return;
+        chooserByParentTF.setText(selectedFile.getParent());
         Button linkedButton = fileButtonHashMap.get(selectedFile);
         if (linkedButton.isDisabled()) return;
 
@@ -352,12 +375,16 @@ public class DeleterChunk extends AbstractGUIChunk {
         fileListLView.scrollTo(selectedFile);
 
         String checksum = checksumListView.getSelectionModel().getSelectedItem();
-        List<File> duplicatesList = chunkManager.getFileListCopy(checksum);
+        setToDelAllFilesExceptOne(checksum, selectedFile);
+    }
 
-        filesToDelete.remove(selectedFile);
-        filesThatRemains.add(selectedFile);
+    private void setToDelAllFilesExceptOne (String fileChecksum, File fileToSave) {
+        List<File> duplicatesList = chunkManager.getFileListCopy(fileChecksum);
+
+        filesToDelete.remove(fileToSave);
+        filesThatRemains.add(fileToSave);
         for (File file : duplicatesList) {
-            if (!file.equals(selectedFile)) {
+            if (!file.equals(fileToSave)) {
                 filesToDelete.add(file);
                 filesThatRemains.remove(file);
             }
