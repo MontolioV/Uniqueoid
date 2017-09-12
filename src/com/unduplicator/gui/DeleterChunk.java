@@ -25,6 +25,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiPredicate;
 import java.util.function.Function;
 
 /**
@@ -37,7 +38,7 @@ public class DeleterChunk extends AbstractGUIChunk {
     private Set<File> filesToDelete = new HashSet<>();
     private Set<File> filesThatRemains = new HashSet<>();
     private HashMap<File, Button> fileButtonHashMap;
-    private ListView<String> checksumListView;
+    private ListView<String> checksumListView = new ListView<>();
     private ListView<File> fileListLView;
 
     private TilePane previewPane;
@@ -48,11 +49,13 @@ public class DeleterChunk extends AbstractGUIChunk {
     private Button toRuntimeButton = new Button();
     private Button deleteButton = new Button();
     private Button chooserByParentButton = new Button();
+    private Button chooserByRootButton = new Button();
 
     private Label hashLabel = new Label();
     private Label previewLabel = new Label();
+    private Label massChooserLabel = new Label();
 
-    private TextField chooserByParentTF = new TextField();
+    private TextField massChooserTF = new TextField();
 
     private ProgressBar progressBar = new ProgressBar();
 
@@ -69,11 +72,13 @@ public class DeleterChunk extends AbstractGUIChunk {
     public void updateLocaleContent() {
         hashLabel.setText(resProvider.getStrFromGUIBundle("hashLabel"));
         previewLabel.setText(resProvider.getStrFromGUIBundle("previewLabel"));
+        massChooserLabel.setText(resProvider.getStrFromGUIBundle("massChooserLabel"));
 
         toSetupButton.setText(resProvider.getStrFromGUIBundle("setupButton"));
         toRuntimeButton.setText(resProvider.getStrFromGUIBundle("runtimeButton"));
         deleteButton.setText(resProvider.getStrFromGUIBundle("deleteButton"));
-
+        chooserByParentButton.setText(resProvider.getStrFromGUIBundle("chooserByParentButton"));
+        chooserByRootButton.setText(resProvider.getStrFromGUIBundle("chooserByRootButton"));
     }
 
     private BorderPane makePane() {
@@ -117,8 +122,10 @@ public class DeleterChunk extends AbstractGUIChunk {
 
             @Override
             public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
+                if (newValue==null) return;
+
                 String checksum = newValue;
-                List<File> fileList = chunkManager.getFileListCopy(checksum);
+                List<File> fileList = chunkManager.getListOfDuplicatesCopy(checksum);
                 ObservableList<File> fileListViewValues = FXCollections.observableArrayList();
                 fileListLView.setItems(fileListViewValues);
                 fileButtonHashMap = new HashMap<>();
@@ -243,18 +250,58 @@ public class DeleterChunk extends AbstractGUIChunk {
         });
     }
 
-    private void makeChooserByParent() {
-        chooserByParentButton.setOnAction(event -> {
-            String parentToFind = chooserByParentTF.getText();
+    private VBox makeMassChooserPane() {
+        VBox result;
+
+        Function<BiPredicate<File, String>, String> massChooserFunc = fileBiPredicate -> {
+            int saveCounter = 0;
+            int delCounter = 0;
+            String parentToFind = massChooserTF.getText();
+
             for (String checksum : chunkManager.getDuplicatesChecksumSet()) {
-                for (File file : chunkManager.getFileListCopy(checksum)) {
-                    if (file.getParent().equals(parentToFind)) {
-                        setToDelAllFilesExceptOne(checksum, file);
+                List<File> duplicates = chunkManager.getListOfDuplicatesCopy(checksum);
+                for (File duplicate : duplicates) {
+                    if (fileBiPredicate.test(duplicate, parentToFind)) {
+                        setToDelAllFilesExceptOne(checksum, duplicate);
+                        delCounter += duplicates.size() - 1;
+                        saveCounter++;
                         break;
                     }
                 }
             }
+            return saveCounter + "\n"
+                    + resProvider.getStrFromMessagesBundle("chosenToDelete")
+                    + delCounter;
+        };
+        BiPredicate<File, String> byParent = (file, parentToFind) -> file.getParent().equals(parentToFind);
+        BiPredicate<File, String> byRoot = (file, rootToFind) -> file.getParent().startsWith(rootToFind);
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+
+        chooserByParentButton.setOnAction(event -> {
+            String report = resProvider.getStrFromMessagesBundle("chosenByParent");
+            report += massChooserFunc.apply(byParent);
+            alert.setHeaderText(report);
+            alert.showAndWait();
         });
+        chooserByRootButton.setOnAction(event -> {
+            String report = resProvider.getStrFromMessagesBundle("chosenByRoot");
+            report += massChooserFunc.apply(byRoot);
+            alert.setHeaderText(report);
+            alert.showAndWait();
+        });
+
+        HBox.setHgrow(massChooserTF, Priority.ALWAYS);
+        HBox textBox = new HBox(5, massChooserLabel, massChooserTF);
+        textBox.setAlignment(Pos.CENTER);
+
+        chooserByParentButton.setMaxWidth(Double.MAX_VALUE);
+        chooserByRootButton.setMaxWidth(Double.MAX_VALUE);
+        HBox.setHgrow(chooserByParentButton, Priority.ALWAYS);
+        HBox.setHgrow(chooserByRootButton, Priority.ALWAYS);
+        HBox buttonsBox = new HBox(5, chooserByParentButton, chooserByRootButton);
+
+        result = new VBox(5, textBox, buttonsBox);
+        return result;
     }
 
     private void makeCenterGrid() {
@@ -278,10 +325,7 @@ public class DeleterChunk extends AbstractGUIChunk {
         ScrollPane previewScrP = new ScrollPane(previewPane);
         previewScrP.setFitToWidth(true);
 
-        makeChooserByParent();
-        HBox chooserByParentBox = new HBox(5, chooserByParentTF, chooserByParentButton);
-        HBox.setHgrow(chooserByParentTF, Priority.ALWAYS);
-        VBox textPart = new VBox(5, fileListLView, chooserByParentBox);
+        VBox textPart = new VBox(5, fileListLView, makeMassChooserPane());
 
         centerGrid.add(hashLabel, 0, 0);
         centerGrid.add(checksumListView, 0, 1);
@@ -359,13 +403,15 @@ public class DeleterChunk extends AbstractGUIChunk {
         filesToDelete = new HashSet<>();
         filesThatRemains = new HashSet<>();
         chunkManager.updateResults();
-        checksumListView = new ListView<>(FXCollections.observableArrayList(
-                                          chunkManager.getDuplicatesChecksumSet()));
+        checksumListView.setItems(FXCollections.observableArrayList(
+                                  chunkManager.getDuplicatesChecksumSet()));
+//        checksumListView = new ListView<>(FXCollections.observableArrayList(
+//                                          chunkManager.getDuplicatesChecksumSet()));
     }
 
     private void selectFileAndDisableButton(File selectedFile) {
         if (selectedFile == null) return;
-        chooserByParentTF.setText(selectedFile.getParent());
+        massChooserTF.setText(selectedFile.getParent());
         Button linkedButton = fileButtonHashMap.get(selectedFile);
         if (linkedButton.isDisabled()) return;
 
@@ -379,7 +425,7 @@ public class DeleterChunk extends AbstractGUIChunk {
     }
 
     private void setToDelAllFilesExceptOne (String fileChecksum, File fileToSave) {
-        List<File> duplicatesList = chunkManager.getFileListCopy(fileChecksum);
+        List<File> duplicatesList = chunkManager.getListOfDuplicatesCopy(fileChecksum);
 
         filesToDelete.remove(fileToSave);
         filesThatRemains.add(fileToSave);

@@ -4,16 +4,14 @@ import javafx.concurrent.Task;
 
 import java.io.File;
 import java.nio.file.NoSuchFileException;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 
 /**
  * <p>Created by MontolioV on 12.07.17.
  */
 public class DeleteFilesTask extends Task<List<File>> {
     private List<File> fileList;
-    private ArrayList<File> dirsToDelete = new ArrayList<>();
+    private Set<File> dirsToDelete = new HashSet<>();
     private List<File> notDeletedFileList = new ArrayList<>();
     private double progress = 0;
     private ResourcesProvider resProvider = ResourcesProvider.getInstance();
@@ -107,14 +105,15 @@ public class DeleteFilesTask extends Task<List<File>> {
     private void deleteEmptyDirs() {
         //Sort dirs to avoid situation, when dir can't be deleted cause it contains another empty dir
         Comparator<File> pathDepthComp = Comparator.comparingInt(f -> f.toPath().toAbsolutePath().getNameCount());
-        dirsToDelete.sort(pathDepthComp.reversed());
+        ArrayList<File> dirsToDeleteAL = new ArrayList<>(dirsToDelete);
+        dirsToDeleteAL.sort(pathDepthComp.reversed());
 
         int counter = 0;
-        for (File file : dirsToDelete) {
+        for (File file : dirsToDeleteAL) {
             if (file.exists() && !file.delete()) {
                 notDeletedFileList.add(file);
             }
-            progress += 0.25 * (++counter / dirsToDelete.size());
+            progress += 0.25 * (++counter / dirsToDeleteAL.size());
             updateProgress(progress, 1);
         }
     }
