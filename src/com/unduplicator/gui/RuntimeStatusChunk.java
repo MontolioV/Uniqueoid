@@ -15,10 +15,6 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.TilePane;
 import javafx.scene.layout.VBox;
 
-import java.io.File;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 /**
@@ -50,8 +46,8 @@ public class RuntimeStatusChunk extends AbstractGUIChunk {
     @Override
     public void updateLocaleContent() {
         stopButton.setText(resProvider.getStrFromGUIBundle("cancelButton"));
-        toSetupBut.setText(resProvider.getStrFromGUIBundle("setupButton"));
-        toResultBut.setText(resProvider.getStrFromGUIBundle("resultButton"));
+        toSetupBut.setText(resProvider.getStrFromGUIBundle("setupNode"));
+        toResultBut.setText(resProvider.getStrFromGUIBundle("deletionNode"));
     }
 
     /**
@@ -96,7 +92,7 @@ public class RuntimeStatusChunk extends AbstractGUIChunk {
         stopButton.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
 
         toSetupBut.setOnAction(event -> chunkManager.showSetupNode());
-        toResultBut.setOnAction(event -> chunkManager.showResultsNode());
+        toResultBut.setOnAction(event -> chunkManager.showDeletionNode());
         stopButton.setOnAction(event -> {
             if (task != null) {
                 task.cancel();

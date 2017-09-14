@@ -6,10 +6,15 @@ import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
+import javafx.stage.FileChooser;
+import javafx.stage.FileChooser.ExtensionFilter;
+import javafx.stage.Stage;
 
+import java.io.File;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.function.Supplier;
 
 /**
  * <p>Created by MontolioV on 11.09.17.
@@ -17,9 +22,17 @@ import java.util.Map;
 public class MenuBarChunk extends AbstractGUIChunk {
     private ResourcesProvider resProvider = ResourcesProvider.getInstance();
     private ChunkManager chunkManager;
+    private Stage mainStage;
 
     private Menu fileMenu = new Menu();
+    private MenuItem saveMI = new MenuItem();
+    private MenuItem loadMI = new MenuItem();
     private MenuItem exitMI = new MenuItem();
+
+    private Menu panelsMenu = new Menu();
+    private MenuItem setupPanelMI = new MenuItem();
+    private MenuItem runtimePanelMI = new MenuItem();
+    private MenuItem deletionPanelMI = new MenuItem();
 
     private Menu languageMenu = new Menu();
     private Map<Locale, MenuItem> languageMIMap = new HashMap<>();
@@ -27,8 +40,9 @@ public class MenuBarChunk extends AbstractGUIChunk {
     private Menu helpMenu = new Menu();
 
 
-    public MenuBarChunk(ChunkManager chunkManager) {
+    public MenuBarChunk(ChunkManager chunkManager, Stage mainStage) {
         this.chunkManager = chunkManager;
+        this.mainStage = mainStage;
         setSelfNode(makeMenuBar());
         updateLocaleContent();
     }
@@ -39,7 +53,14 @@ public class MenuBarChunk extends AbstractGUIChunk {
     @Override
     public void updateLocaleContent() {
         fileMenu.setText(resProvider.getStrFromGUIBundle("fileMenu"));
+        saveMI.setText(resProvider.getStrFromGUIBundle("saveMI"));
+        loadMI.setText(resProvider.getStrFromGUIBundle("loadMI"));
         exitMI.setText(resProvider.getStrFromGUIBundle("exitMI"));
+
+        panelsMenu.setText(resProvider.getStrFromGUIBundle("panelsMenu"));
+        setupPanelMI.setText((resProvider.getStrFromGUIBundle("setupNode")));
+        runtimePanelMI.setText(resProvider.getStrFromGUIBundle("runtimeNode"));
+        deletionPanelMI.setText(resProvider.getStrFromGUIBundle("deletionNode"));
 
         languageMenu.setText(resProvider.getStrFromGUIBundle("languageMenu"));
         for (Locale locale : resProvider.getSupportedLocales()) {
@@ -50,10 +71,34 @@ public class MenuBarChunk extends AbstractGUIChunk {
         helpMenu.setText(resProvider.getStrFromGUIBundle("helpMenu"));
     }
 
+    @Override
+    public boolean changeState(GuiStates newState) {
+        if (super.changeState(newState)) {
+            switch (newState) {
+                case NO_RESULTS:
+                    saveMI.setDisable(true);
+                    deletionPanelMI.setDisable(true);
+                    break;
+                case RUNNING:
+                    saveMI.setDisable(true);
+                    deletionPanelMI.setDisable(true);
+                    break;
+                case HAS_RESULTS:
+                    saveMI.setDisable(false);
+                    deletionPanelMI.setDisable(false);
+                    break;
+            }
+            return true;
+        } else {
+            return false;
+        }
+    }
+
     private MenuBar makeMenuBar() {
         MenuBar result = new MenuBar();
 
         result.getMenus().add(makeFileMenu());
+        result.getMenus().add(makePanelsMenu());
         result.getMenus().add(makeLanguageMenu());
         result.getMenus().add(makeHelpMenu());
 
@@ -61,13 +106,45 @@ public class MenuBarChunk extends AbstractGUIChunk {
     }
 
     private Menu makeFileMenu() {
+        Supplier<FileChooser> fileChooserSupplier = () -> {
+            FileChooser fileChooser = new FileChooser();
+            ExtensionFilter filter = new ExtensionFilter(resProvider.getStrFromGUIBundle("fileFilter"),
+                                                         "*.ser");
+            fileChooser.setSelectedExtensionFilter(filter);
+            return fileChooser;
+        };
+
+
+        saveMI.setOnAction(event -> {
+            File file = fileChooserSupplier.get().showSaveDialog(mainStage);
+            if (file != null) {
+                chunkManager.saveResults(file);
+            }
+        });
+        loadMI.setOnAction(event -> {
+            File file = fileChooserSupplier.get().showOpenDialog(mainStage);
+            if (file != null) {
+                chunkManager.loadResults(file);
+            }
+        });
         exitMI.setOnAction(event -> Platform.exit());
 
         fileMenu.getItems().addAll(
+                saveMI,
+                loadMI,
                 new SeparatorMenuItem(),
                 exitMI);
 
         return fileMenu;
+    }
+
+    private Menu makePanelsMenu() {
+        setupPanelMI.setOnAction(event -> chunkManager.showSetupNode());
+        runtimePanelMI.setOnAction(event -> chunkManager.showRuntimeStatusNode());
+        deletionPanelMI.setOnAction(event -> chunkManager.showDeletionNode());
+
+        panelsMenu.getItems().addAll(setupPanelMI, runtimePanelMI, deletionPanelMI);
+        return panelsMenu;
     }
 
     private Menu makeLanguageMenu() {

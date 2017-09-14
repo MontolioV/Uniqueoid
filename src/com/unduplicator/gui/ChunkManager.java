@@ -24,11 +24,12 @@ public class ChunkManager {
         makeChunks();
         showMenuBar();
         showSetupNode();
+        updateChunksStates(GuiStates.NO_RESULTS);
     }
 
     //Make chunks
     private void makeChunks() {
-        menuBarChunk = new MenuBarChunk(this);
+        menuBarChunk = new MenuBarChunk(this, GUI.getPrimaryStage());
         runtimeChunk = new RuntimeStatusChunk(this);
         setupChunk = new SetupChunk(GUI.getPrimaryStage());
 
@@ -53,7 +54,7 @@ public class ChunkManager {
     protected void showRuntimeStatusNode() {
         GUI.setCenterNode(runtimeChunk.getAsNode());
     }
-    protected void showResultsNode() {
+    protected void showDeletionNode() {
         GUI.setCenterNode(deleterChunk.getAsNode());
     }
     protected void showException(Exception ex) {
@@ -77,8 +78,26 @@ public class ChunkManager {
 
     //Results object
     protected void setResults(HashMap<String, List<File>> processedFilesHM) {
-        results = new Results(processedFilesHM);
+        results = new Results(this, processedFilesHM);
     }
+    protected void saveResults(File file) {
+        results.saveToFile(file);
+    }
+    protected void loadResults(File file) {
+        results = new Results(this, file);
+        updateChunksStates(GuiStates.HAS_RESULTS);
+
+        DeleterChunk oldDeleterChunk = deleterChunk;
+        makeDeleterChunk();
+
+        if (oldDeleterChunk != null) {
+            chunks.remove(oldDeleterChunk);
+            if (GUI.isNodeShownInCenter(oldDeleterChunk.getAsNode())) {
+                GUI.setCenterNode(deleterChunk.getAsNode());
+            }
+        }
+    }
+
     /**
      * Remove files that already don't exist.
      */

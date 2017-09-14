@@ -1,19 +1,33 @@
 package com.unduplicator.gui;
 
-import javafx.collections.ObservableList;
-
-import java.io.File;
+import java.io.*;
 import java.util.*;
 
 /**
  * <p>Created by MontolioV on 30.08.17.
  */
 public class Results {
+    private ChunkManager chunkManager;
+
     private Map<String, List<File>> processedFilesMap;
     private Set<String> duplicateChSumSet;
 
-    public Results(Map<String, List<File>> processedFilesMap) {
+    public Results(ChunkManager chunkManager, Map<String, List<File>> processedFilesMap) {
         this.processedFilesMap = processedFilesMap;
+        this.chunkManager = chunkManager;
+        makeDuplicateSet();
+    }
+
+    public Results(ChunkManager chunkManager, File serializationFile) {
+        this.chunkManager = chunkManager;
+        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(serializationFile))) {
+            processedFilesMap = (Map<String, List<File>>) ois.readObject();
+        } catch (IOException e) {
+            e.printStackTrace();
+            chunkManager.showException(e);
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
         makeDuplicateSet();
     }
 
@@ -51,5 +65,14 @@ public class Results {
 
     protected Set<String> getDuplicateChecksumSet() {
         return duplicateChSumSet;
+    }
+
+    protected void saveToFile(File file) {
+        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(file))) {
+            oos.writeObject(processedFilesMap);
+        } catch (IOException e) {
+            e.printStackTrace();
+            chunkManager.showException(e);
+        }
     }
 }

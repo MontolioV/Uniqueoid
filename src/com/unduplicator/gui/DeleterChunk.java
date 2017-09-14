@@ -74,8 +74,8 @@ public class DeleterChunk extends AbstractGUIChunk {
         previewLabel.setText(resProvider.getStrFromGUIBundle("previewLabel"));
         massChooserLabel.setText(resProvider.getStrFromGUIBundle("massChooserLabel"));
 
-        toSetupButton.setText(resProvider.getStrFromGUIBundle("setupButton"));
-        toRuntimeButton.setText(resProvider.getStrFromGUIBundle("runtimeButton"));
+        toSetupButton.setText(resProvider.getStrFromGUIBundle("setupNode"));
+        toRuntimeButton.setText(resProvider.getStrFromGUIBundle("runtimeNode"));
         deleteButton.setText(resProvider.getStrFromGUIBundle("deleteButton"));
         chooserByParentButton.setText(resProvider.getStrFromGUIBundle("chooserByParentButton"));
         chooserByRootButton.setText(resProvider.getStrFromGUIBundle("chooserByRootButton"));
@@ -405,8 +405,6 @@ public class DeleterChunk extends AbstractGUIChunk {
         chunkManager.updateResults();
         checksumListView.setItems(FXCollections.observableArrayList(
                                   chunkManager.getDuplicatesChecksumSet()));
-//        checksumListView = new ListView<>(FXCollections.observableArrayList(
-//                                          chunkManager.getDuplicatesChecksumSet()));
     }
 
     private void selectFileAndDisableButton(File selectedFile) {

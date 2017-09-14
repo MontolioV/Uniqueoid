@@ -29,6 +29,7 @@ import java.util.List;
  */
 public class SetupChunk extends AbstractGUIChunk {
     private ResourcesProvider resProvider = ResourcesProvider.getInstance();
+    private Stage mainStage;
 
     private List<File> chosenFiles = new ArrayList<>();
     private String chosenAlgorithm = "SHA-256";
@@ -42,7 +43,8 @@ public class SetupChunk extends AbstractGUIChunk {
     private Label algorithmLabel = new Label();
 
     public SetupChunk(Stage mainStage) {
-        setSelfNode(makePane(mainStage));
+        this.mainStage = mainStage;
+        setSelfNode(makePane());
         updateLocaleContent();
     }
 
@@ -88,7 +90,7 @@ public class SetupChunk extends AbstractGUIChunk {
         }
     }
 
-    private BorderPane makePane(Stage mainStage) {
+    private BorderPane makePane() {
         //Display
         VBox innerBox = new VBox(headerLabel);
         innerBox.setAlignment(Pos.CENTER);

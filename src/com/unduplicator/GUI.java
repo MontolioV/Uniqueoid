@@ -29,8 +29,10 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 /**
+ * Old GUI. Use Unduplicator.src.com.unduplicator.gui.* instead.
  * <p>Created by MontolioV on 20.06.17.
  */
+@Deprecated
 public class GUI extends Application {
     private ResourcesProvider resProvider = ResourcesProvider.getInstance();
 
@@ -214,8 +216,8 @@ public class GUI extends Application {
         messagesTA.setEditable(false);
         messagesTA.setWrapText(true);
 
-        Button toSetupBut = new Button(resProvider.getStrFromGUIBundle("setupButton"));
-        Button toResultBut = new Button(resProvider.getStrFromGUIBundle("resultButton"));
+        Button toSetupBut = new Button(resProvider.getStrFromGUIBundle("setupNode"));
+        Button toResultBut = new Button(resProvider.getStrFromGUIBundle("deletionNode"));
 
         toSetupBut.setOnAction(event -> switchScene(setupScene));
         toResultBut.setOnAction(event -> switchScene(resultScene));
@@ -408,8 +410,8 @@ public class GUI extends Application {
         pbDel.setManaged(false);
         pbDel.setMaxWidth(Double.MAX_VALUE);
 
-        Button toSetupBut = new Button(resProvider.getStrFromGUIBundle("setupButton"));
-        Button toRuntimeBut = new Button(resProvider.getStrFromGUIBundle("runtimeButton"));
+        Button toSetupBut = new Button(resProvider.getStrFromGUIBundle("setupNode"));
+        Button toRuntimeBut = new Button(resProvider.getStrFromGUIBundle("runtimeNode"));
         toSetupBut.setOnAction(event -> switchScene(setupScene));
         toRuntimeBut.setOnAction(event -> switchScene(runtimeScene));
         Button deleteButton = new Button(resProvider.getStrFromGUIBundle("deleteButton"));

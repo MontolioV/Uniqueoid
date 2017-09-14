@@ -88,4 +88,8 @@ public class GUI extends Application{
     public Stage getPrimaryStage() {
         return primaryStage;
     }
+
+    protected boolean isNodeShownInCenter(Node node) {
+        return appPane.getCenter().equals(node);
+    }
 }
