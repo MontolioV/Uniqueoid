@@ -47,6 +47,7 @@ public class GUI extends Application{
         chunkManager = new ChunkManager(this);
         Scene mainScene = new Scene(appPane, 700, 600);
         primaryStage.setScene(mainScene);
+        primaryStage.setTitle("Unduplicator");
         primaryStage.show();
     }
 

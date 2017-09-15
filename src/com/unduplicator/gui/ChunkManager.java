@@ -58,22 +58,19 @@ public class ChunkManager {
         GUI.setCenterNode(deleterChunk.getAsNode());
     }
     protected void showException(Exception ex) {
+        ex.printStackTrace();
         GUI.showException(ex);
     }
     protected void resizeAlertManually(Alert alert) {
         GUI.resizeAlertManually(alert);
     }
 
-    //Update chunks
+    //Update all chunks
     protected void updateChunksLocales() {
         chunks.forEach(LocaleDependent::updateLocaleContent);
     }
     protected void updateChunksStates(GuiStates newState) {
         chunks.forEach(chunk -> chunk.changeState(newState));
-    }
-
-    protected FindDuplicatesTask getTask() {
-        return setupChunk.getTask();
     }
 
     //Results object
@@ -92,12 +89,10 @@ public class ChunkManager {
 
         if (oldDeleterChunk != null) {
             chunks.remove(oldDeleterChunk);
-            if (GUI.isNodeShownInCenter(oldDeleterChunk.getAsNode())) {
-                GUI.setCenterNode(deleterChunk.getAsNode());
-            }
         }
-    }
 
+        showDeletionNode();
+    }
     /**
      * Remove files that already don't exist.
      */
@@ -120,5 +115,23 @@ public class ChunkManager {
     protected void cleanOldResults() {
         results = null;
         deleterChunk = null;
+    }
+
+    //Setup chunk features
+    protected FindDuplicatesTask getTask() {
+        return setupChunk.getTask();
+    }
+
+    //Deleter chunk features
+    protected void removeFromDeletionCurrent() {
+        deleterChunk.unselectCurrent();
+    }
+    protected void removeFromDeletionAll() {
+        deleterChunk.unselectAll();
+    }
+    protected void updateDeleterChunk() {
+        if (deleterChunk != null) {
+            deleterChunk.updateChunk();
+        }
     }
 }

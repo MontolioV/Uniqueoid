@@ -3,8 +3,6 @@ package com.unduplicator.gui;
 import com.unduplicator.DeleteFilesTask;
 import com.unduplicator.ResourcesProvider;
 import javafx.application.Platform;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
@@ -35,8 +33,10 @@ public class DeleterChunk extends AbstractGUIChunk {
     private ResourcesProvider resProvider = ResourcesProvider.getInstance();
     private ChunkManager chunkManager;
 
+    private Task<Void> showDuplicatesTask;
+
     private Set<File> filesToDelete = new HashSet<>();
-    private Set<File> filesThatRemains = new HashSet<>();
+    private Map<File, String> filesThatRemains = new HashMap<>();
     private HashMap<File, Button> fileButtonHashMap;
     private ListView<String> checksumListView = new ListView<>();
     private ListView<File> fileListLView;
@@ -81,6 +81,25 @@ public class DeleterChunk extends AbstractGUIChunk {
         chooserByRootButton.setText(resProvider.getStrFromGUIBundle("chooserByRootButton"));
     }
 
+    public void updateChunk() {
+        String selectedChecksum = checksumListView.getSelectionModel().getSelectedItem();
+
+        HashSet<String> nonexistentFiles = new HashSet<>();
+        for (Map.Entry<File, String> entry : filesThatRemains.entrySet()) {
+            if (!entry.getKey().exists()) {
+                nonexistentFiles.add(entry.getValue());
+            }
+        }
+        nonexistentFiles.forEach(this::unselectByChecksum);
+
+        checksumListView.setItems(FXCollections.observableArrayList(chunkManager.getDuplicatesChecksumSet()));
+        if (checksumListView.getItems().contains(selectedChecksum)) {
+            checksumListView.getSelectionModel().select(selectedChecksum);
+        } else {
+            updateDuplicatesRepresentation(null);
+        }
+    }
+
     private BorderPane makePane() {
         makePreviewPane();
         makeFileListView();
@@ -95,7 +114,6 @@ public class DeleterChunk extends AbstractGUIChunk {
 
         return resultPane;
     }
-
     private void makePreviewPane() {
         previewPane = new TilePane();
         previewPane.setPrefColumns(3);
@@ -103,7 +121,6 @@ public class DeleterChunk extends AbstractGUIChunk {
         previewPane.setHgap(3);
         previewPane.setPadding(new Insets(5));
     }
-
     private void makeFileListView() {
         fileListLView = new ListView<>(FXCollections.observableArrayList());
         fileListLView.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
@@ -111,145 +128,12 @@ public class DeleterChunk extends AbstractGUIChunk {
             selectFileAndDisableButton(newValue);
         });
     }
-
     private void makeChecksumListView() {
-        updateDataForGUI();
+        fullModelRefresh();
         checksumListView.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
-        checksumListView.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<String>() {
-            private Task<Void> prevTask;
-            final double WIDTH = 200;
-            final double HEIGHT = 200;
-
-            @Override
-            public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
-                if (newValue==null) return;
-
-                String checksum = newValue;
-                List<File> fileList = chunkManager.getListOfDuplicatesCopy(checksum);
-                ObservableList<File> fileListViewValues = FXCollections.observableArrayList();
-                fileListLView.setItems(fileListViewValues);
-                fileButtonHashMap = new HashMap<>();
-
-                if (prevTask != null) {
-                    prevTask.cancel();
-                }
-                previewPane.getChildren().clear();
-
-                ArrayList<Task<Void>> tasks = new ArrayList<>();
-                prevTask = new Task<Void>() {
-                    AtomicBoolean stop = new AtomicBoolean();
-                    AtomicInteger progress = new AtomicInteger();
-
-                    @Override
-                    protected Void call() throws Exception {
-                        Executor pool = Executors.newFixedThreadPool(4, r -> {
-                            Thread daemonThr = new Thread(r);
-                            daemonThr.setDaemon(true);
-                            return daemonThr;
-                        });
-
-                        for (File file : fileList) {
-                            if (isCancelled()) {
-                                return null;
-                            }
-
-                            ImageView imageView = new ImageView();
-                            ProgressIndicator prIndicator = new ProgressIndicator();
-                            prIndicator.progressProperty().addListener((observable1, oldValue1, newValue1) -> {
-                                if (newValue1.doubleValue() >= 1) {
-                                    prIndicator.setVisible(false);
-                                }
-                            });
-                            StackPane stackPane = new StackPane(prIndicator);
-
-                            Task<Void> imgTask = new Task<Void>() {
-                                final long MAX_IMG_SIZE = 52_500_000;
-
-                                @Override
-                                protected Void call() throws Exception {
-                                    Platform.runLater(() -> fileListViewValues.add(file));
-
-                                    Button previewButton = new Button(file.getName(), imageView);
-                                    previewButton.setMaxSize(WIDTH, HEIGHT);
-                                    previewButton.setContentDisplay(ContentDisplay.TOP);
-                                    previewButton.setOnAction(event1 -> {
-                                        selectFileAndDisableButton(file);
-                                    });
-                                    if (file.length() < MAX_IMG_SIZE) {
-                                        try (BufferedInputStream bis = new BufferedInputStream(new FileInputStream(file))) {
-                                            Image image = new Image(bis, WIDTH, HEIGHT, true, true);
-                                            if (!isCancelled()) {
-                                                Platform.runLater(() -> {
-                                                    prIndicator.progressProperty().bind(image.progressProperty());
-                                                    stackPane.getChildren().add(previewButton);
-                                                });
-                                            } else {
-                                                image.cancel();
-                                            }
-                                            imageView.setImage(image);
-                                        } catch (IOException e) {
-                                            chunkManager.showException(e);
-                                        }
-                                    }
-
-                                    fileButtonHashMap.put(file, previewButton);
-                                    increaseProgress();
-                                    return null;
-                                }
-                            };
-
-                            pool.execute(imgTask);
-                            tasks.add(imgTask);
-
-                            if (!isCancelled()) {
-                                Platform.runLater(() -> previewPane.getChildren().add(stackPane));
-                            }
-                        }
-
-                        return null;
-                    }
-
-                    @Override
-                    public boolean cancel(boolean mayInterruptIfRunning) {
-                        boolean result = super.cancel(mayInterruptIfRunning);
-                        stop.set(true);
-                        tasks.forEach(Task::cancel);
-                        return result;
-                    }
-
-                    private void increaseProgress() {
-                        updateProgress(progress.incrementAndGet(), fileList.size());
-                    }
-                };
-
-                progressBar.setManaged(true);
-                progressBar.progressProperty().bind(prevTask.progressProperty());
-
-                Thread thread = new Thread(() -> {
-                    try {
-                        prevTask.run();
-                        prevTask.get();
-                        for (Task<Void> voidTask : tasks) {
-                            voidTask.get();
-                        }
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        chunkManager.showException(e);
-                    }
-                    for (File file : fileList) {
-                        if (filesThatRemains.contains(file)) {
-                            Platform.runLater(() -> selectFileAndDisableButton(file));
-                        }
-                    }
-
-                    Platform.runLater(() -> progressBar.setManaged(false));
-                });
-                thread.setDaemon(true);
-                thread.start();
-            }
-        });
+        checksumListView.getSelectionModel().selectedItemProperty().addListener(
+                (observable, oldValue, newValue) -> updateDuplicatesRepresentation(newValue));
     }
-
     private VBox makeMassChooserPane() {
         VBox result;
 
@@ -303,7 +187,6 @@ public class DeleterChunk extends AbstractGUIChunk {
         result = new VBox(5, textBox, buttonsBox);
         return result;
     }
-
     private void makeCenterGrid() {
         centerGrid = new GridPane();
         centerGrid.setVgap(10);
@@ -317,8 +200,8 @@ public class DeleterChunk extends AbstractGUIChunk {
         RowConstraints rCons1 = new RowConstraints();
         RowConstraints rCons2 = new RowConstraints();
         rCons0.setPercentHeight(0);
-        rCons1.setPercentHeight(70);
-        rCons2.setPercentHeight(30);
+        rCons1.setPercentHeight(60);
+        rCons2.setPercentHeight(40);
         centerGrid.getRowConstraints().setAll(rCons0, rCons1, rCons2);
         centerGrid.setPadding(new Insets(0, 0, 10, 0));
 
@@ -333,7 +216,6 @@ public class DeleterChunk extends AbstractGUIChunk {
         centerGrid.add(previewScrP, 1, 1);
         centerGrid.add(textPart, 0, 2, 2, 1);
     }
-
     private void makeBottomBox() {
         progressBar.visibleProperty().bindBidirectional(progressBar.managedProperty());
         progressBar.setManaged(false);
@@ -342,6 +224,13 @@ public class DeleterChunk extends AbstractGUIChunk {
         toSetupButton.setOnAction(event -> chunkManager.showSetupNode());
         toRuntimeButton.setOnAction(event -> chunkManager.showRuntimeStatusNode());
         deleteButton.setOnAction(event -> {
+            for (File file : filesThatRemains.keySet()) {
+                if (!file.exists()) {
+                    chunkManager.updateResults();
+                    break;
+                }
+            }
+
             Function<Collection<File>, TextArea> colToTAFunction = files -> {
                 StringJoiner sj = new StringJoiner("\n");
                 files.forEach(f -> sj.add(f.toString()));
@@ -379,12 +268,11 @@ public class DeleterChunk extends AbstractGUIChunk {
                             chunkManager.showException(e);
                         }
 
-                        updateDataForGUI();
+                        fullModelRefresh();
                         progressBar.setManaged(false);
                         reportAlert.showAndWait();
 
-                        previewPane.getChildren().clear();
-                        fileListLView.getItems().clear();
+                        updateDuplicatesRepresentation(null);
                     });
         });
 
@@ -399,9 +287,9 @@ public class DeleterChunk extends AbstractGUIChunk {
                 buttonsBox);
     }
 
-    private void updateDataForGUI() {
+    private void fullModelRefresh() {
         filesToDelete = new HashSet<>();
-        filesThatRemains = new HashSet<>();
+        filesThatRemains = new HashMap<>();
         chunkManager.updateResults();
         checksumListView.setItems(FXCollections.observableArrayList(
                                   chunkManager.getDuplicatesChecksumSet()));
@@ -426,12 +314,164 @@ public class DeleterChunk extends AbstractGUIChunk {
         List<File> duplicatesList = chunkManager.getListOfDuplicatesCopy(fileChecksum);
 
         filesToDelete.remove(fileToSave);
-        filesThatRemains.add(fileToSave);
+        filesThatRemains.put(fileToSave, fileChecksum);
         for (File file : duplicatesList) {
             if (!file.equals(fileToSave)) {
                 filesToDelete.add(file);
                 filesThatRemains.remove(file);
             }
         }
+    }
+
+    public void unselectCurrent() {
+        String selectedChecksum = checksumListView.getSelectionModel().getSelectedItem();
+        unselectByChecksum(selectedChecksum);
+    }
+
+    private void unselectByChecksum(String checksum) {
+        if (checksum == null || checksum.equals("")) return;
+
+        List<File> files = chunkManager.getListOfDuplicatesCopy(checksum);
+        files.forEach(file -> {
+            filesToDelete.remove(file);
+            filesThatRemains.remove(file);
+        });
+    }
+
+    public void unselectAll() {
+        filesToDelete = new HashSet<>();
+        filesThatRemains = new HashMap<>();
+    }
+
+    private void updateDuplicatesRepresentation(String checksum) {
+        if (checksum == null || checksum.equals("")) {
+            previewPane.getChildren().clear();
+            fileListLView.getItems().clear();
+            return;
+        }
+
+        if (showDuplicatesTask != null) {
+            showDuplicatesTask.cancel();
+        }
+
+        double width = 200;
+        double height = 200;
+        List<File> fileList = chunkManager.getListOfDuplicatesCopy(checksum);
+        ObservableList<File> fileListViewValues = FXCollections.observableArrayList();
+        fileListLView.setItems(fileListViewValues);
+        fileButtonHashMap = new HashMap<>();
+        previewPane.getChildren().clear();
+        ArrayList<Task<Void>> tasks = new ArrayList<>();
+
+        showDuplicatesTask = new Task<Void>() {
+            AtomicBoolean stop = new AtomicBoolean();
+            AtomicInteger progress = new AtomicInteger();
+
+            @Override
+            protected Void call() throws Exception {
+                Executor pool = Executors.newFixedThreadPool(4, r -> {
+                    Thread daemonThr = new Thread(r);
+                    daemonThr.setDaemon(true);
+                    return daemonThr;
+                });
+
+                for (File file : fileList) {
+                    if (isCancelled()) {
+                        return null;
+                    }
+
+                    ImageView imageView = new ImageView();
+                    ProgressIndicator prIndicator = new ProgressIndicator();
+                    prIndicator.progressProperty().addListener((observable1, oldValue1, newValue1) -> {
+                        if (newValue1.doubleValue() >= 1) {
+                            prIndicator.setVisible(false);
+                        }
+                    });
+                    StackPane stackPane = new StackPane(prIndicator);
+
+                    Task<Void> imgTask = new Task<Void>() {
+                        final long MAX_IMG_SIZE = 52_500_000;
+
+                        @Override
+                        protected Void call() throws Exception {
+                            Platform.runLater(() -> fileListViewValues.add(file));
+
+                            Button previewButton = new Button(file.getName(), imageView);
+                            previewButton.setMaxSize(width, height);
+                            previewButton.setContentDisplay(ContentDisplay.TOP);
+                            previewButton.setOnAction(event1 -> {
+                                selectFileAndDisableButton(file);
+                            });
+                            if (file.length() < MAX_IMG_SIZE) {
+                                try (BufferedInputStream bis = new BufferedInputStream(new FileInputStream(file))) {
+                                    Image image = new Image(bis, width, height, true, true);
+                                    if (!isCancelled()) {
+                                        Platform.runLater(() -> {
+                                            prIndicator.progressProperty().bind(image.progressProperty());
+                                            stackPane.getChildren().add(previewButton);
+                                        });
+                                    } else {
+                                        image.cancel();
+                                    }
+                                    imageView.setImage(image);
+                                } catch (IOException e) {
+                                    chunkManager.showException(e);
+                                }
+                            }
+
+                            fileButtonHashMap.put(file, previewButton);
+                            increaseProgress();
+                            return null;
+                        }
+                    };
+
+                    pool.execute(imgTask);
+                    tasks.add(imgTask);
+
+                    if (!isCancelled()) {
+                        Platform.runLater(() -> previewPane.getChildren().add(stackPane));
+                    }
+                }
+
+                return null;
+            }
+
+            @Override
+            public boolean cancel(boolean mayInterruptIfRunning) {
+                boolean result = super.cancel(mayInterruptIfRunning);
+                stop.set(true);
+                tasks.forEach(Task::cancel);
+                return result;
+            }
+
+            private void increaseProgress() {
+                updateProgress(progress.incrementAndGet(), fileList.size());
+            }
+        };
+
+        progressBar.setManaged(true);
+        progressBar.progressProperty().bind(showDuplicatesTask.progressProperty());
+
+        Thread thread = new Thread(() -> {
+            try {
+                showDuplicatesTask.run();
+                showDuplicatesTask.get();
+                for (Task<Void> voidTask : tasks) {
+                    voidTask.get();
+                }
+            } catch (Exception e) {
+                chunkManager.showException(e);
+            }
+            for (File file : fileList) {
+                if (filesThatRemains.containsKey(file)) {
+                    Platform.runLater(() -> selectFileAndDisableButton(file));
+                }
+            }
+
+            Platform.runLater(() -> progressBar.setManaged(false));
+        });
+        thread.setDaemon(true);
+        thread.start();
+
     }
 }

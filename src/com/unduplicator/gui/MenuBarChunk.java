@@ -29,6 +29,11 @@ public class MenuBarChunk extends AbstractGUIChunk {
     private MenuItem loadMI = new MenuItem();
     private MenuItem exitMI = new MenuItem();
 
+    private Menu editMenu = new Menu();
+    private Menu deletionEditMenu = new Menu();
+    private MenuItem unselectCurrentMI = new MenuItem();
+    private MenuItem unselectAllMI = new MenuItem();
+
     private Menu panelsMenu = new Menu();
     private MenuItem setupPanelMI = new MenuItem();
     private MenuItem runtimePanelMI = new MenuItem();
@@ -57,6 +62,11 @@ public class MenuBarChunk extends AbstractGUIChunk {
         loadMI.setText(resProvider.getStrFromGUIBundle("loadMI"));
         exitMI.setText(resProvider.getStrFromGUIBundle("exitMI"));
 
+        editMenu.setText(resProvider.getStrFromGUIBundle("editMenu"));
+        deletionEditMenu.setText(resProvider.getStrFromGUIBundle("deletionEditMenu"));
+        unselectCurrentMI.setText(resProvider.getStrFromGUIBundle("unselectCurrentMI"));
+        unselectAllMI.setText(resProvider.getStrFromGUIBundle("unselectAllMI"));
+
         panelsMenu.setText(resProvider.getStrFromGUIBundle("panelsMenu"));
         setupPanelMI.setText((resProvider.getStrFromGUIBundle("setupNode")));
         runtimePanelMI.setText(resProvider.getStrFromGUIBundle("runtimeNode"));
@@ -78,14 +88,17 @@ public class MenuBarChunk extends AbstractGUIChunk {
                 case NO_RESULTS:
                     saveMI.setDisable(true);
                     deletionPanelMI.setDisable(true);
+                    deletionEditMenu.setDisable(true);
                     break;
                 case RUNNING:
                     saveMI.setDisable(true);
                     deletionPanelMI.setDisable(true);
+                    deletionEditMenu.setDisable(true);
                     break;
                 case HAS_RESULTS:
                     saveMI.setDisable(false);
                     deletionPanelMI.setDisable(false);
+                    deletionEditMenu.setDisable(false);
                     break;
             }
             return true;
@@ -98,6 +111,7 @@ public class MenuBarChunk extends AbstractGUIChunk {
         MenuBar result = new MenuBar();
 
         result.getMenus().add(makeFileMenu());
+        result.getMenus().add(makeEditMenu());
         result.getMenus().add(makePanelsMenu());
         result.getMenus().add(makeLanguageMenu());
         result.getMenus().add(makeHelpMenu());
@@ -110,7 +124,9 @@ public class MenuBarChunk extends AbstractGUIChunk {
             FileChooser fileChooser = new FileChooser();
             ExtensionFilter filter = new ExtensionFilter(resProvider.getStrFromGUIBundle("fileFilter"),
                                                          "*.ser");
+            fileChooser.getExtensionFilters().add(filter);
             fileChooser.setSelectedExtensionFilter(filter);
+            fileChooser.setInitialFileName("*.ser");
             return fileChooser;
         };
 
@@ -136,6 +152,15 @@ public class MenuBarChunk extends AbstractGUIChunk {
                 exitMI);
 
         return fileMenu;
+    }
+
+    private Menu makeEditMenu() {
+        unselectCurrentMI.setOnAction(event -> chunkManager.removeFromDeletionCurrent());
+        unselectAllMI.setOnAction(event -> chunkManager.removeFromDeletionAll());
+
+        deletionEditMenu.getItems().addAll(unselectCurrentMI, unselectAllMI);
+        editMenu.getItems().addAll(deletionEditMenu);
+        return editMenu;
     }
 
     private Menu makePanelsMenu() {
@@ -164,7 +189,5 @@ public class MenuBarChunk extends AbstractGUIChunk {
 
         return helpMenu;
     }
-
-
 
 }

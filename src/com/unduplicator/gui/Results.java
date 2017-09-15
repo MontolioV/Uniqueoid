@@ -22,11 +22,8 @@ public class Results {
         this.chunkManager = chunkManager;
         try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(serializationFile))) {
             processedFilesMap = (Map<String, List<File>>) ois.readObject();
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (Exception e) {
             chunkManager.showException(e);
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
         }
         makeDuplicateSet();
     }
@@ -52,6 +49,7 @@ public class Results {
             processedFilesMap.replace(s, updatedList);
         });
         makeDuplicateSet();
+        chunkManager.updateDeleterChunk();
     }
 
     private void makeDuplicateSet() {
@@ -60,6 +58,12 @@ public class Results {
     }
 
     protected List<File> getFilesListCopy(String checksumKey) {
+        for (File file : processedFilesMap.get(checksumKey)) {
+            if (!file.exists()) {
+                removeMissingFiles();
+                break;
+            }
+        }
         return new ArrayList<>(processedFilesMap.get(checksumKey));
     }
 
@@ -71,7 +75,6 @@ public class Results {
         try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(file))) {
             oos.writeObject(processedFilesMap);
         } catch (IOException e) {
-            e.printStackTrace();
             chunkManager.showException(e);
         }
     }
