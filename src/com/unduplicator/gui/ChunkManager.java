@@ -41,6 +41,7 @@ public class ChunkManager {
     }
     protected void makeDeleterChunk() {
         deleterChunk = new DeleterChunk(this);
+        deleterChunk.updateChunk();
         chunks.add(deleterChunk);
     }
 
@@ -103,11 +104,31 @@ public class ChunkManager {
         if (results == null) return 0;
         return results.countDuplicates();
     }
+    @Deprecated
     protected List<File> getListOfDuplicatesCopy(String checksumKey) {
         return results.getFilesListCopy(checksumKey);
     }
     protected Set<String> getDuplicatesChecksumSet() {
         return results.getDuplicateChecksumSet();
+    }
+    protected void chooseOneAmongDuplicates(String checksum, File fileThatRemains) {
+        results.chooseOneAmongDuplicates(checksum, fileThatRemains);
+    }
+    protected void removeSelectionsByChecksum(String checksum) {
+        results.unselectByChecksum(checksum);
+    }
+    protected void removeSelectionsAll() {
+        results.unselectAll();
+        if (deleterChunk != null) deleterChunk.updateChunk();
+    }
+    protected Set<File> getFilesThatRemains() {
+        return results.getFilesThatRemains();
+    }
+    protected Set<File> getFilesToDelete() {
+        return results.getFilesToDelete();
+    }
+    protected boolean isFileChosen(File file) {
+        return results.isFileChosen(file);
     }
 
 
@@ -123,11 +144,9 @@ public class ChunkManager {
     }
 
     //Deleter chunk features
-    protected void removeFromDeletionCurrent() {
+    protected void removeSelectionsCurrent() {
         deleterChunk.unselectCurrent();
-    }
-    protected void removeFromDeletionAll() {
-        deleterChunk.unselectAll();
+        deleterChunk.updateChunk();
     }
     protected void updateDeleterChunk() {
         if (deleterChunk != null) {

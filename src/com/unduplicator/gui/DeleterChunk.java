@@ -35,8 +35,6 @@ public class DeleterChunk extends AbstractGUIChunk {
 
     private Task<Void> showDuplicatesTask;
 
-    private Set<File> filesToDelete = new HashSet<>();
-    private Map<File, String> filesThatRemains = new HashMap<>();
     private HashMap<File, Button> fileButtonHashMap;
     private ListView<String> checksumListView = new ListView<>();
     private ListView<File> fileListLView;
@@ -84,14 +82,6 @@ public class DeleterChunk extends AbstractGUIChunk {
     public void updateChunk() {
         String selectedChecksum = checksumListView.getSelectionModel().getSelectedItem();
 
-        HashSet<String> nonexistentFiles = new HashSet<>();
-        for (Map.Entry<File, String> entry : filesThatRemains.entrySet()) {
-            if (!entry.getKey().exists()) {
-                nonexistentFiles.add(entry.getValue());
-            }
-        }
-        nonexistentFiles.forEach(this::unselectByChecksum);
-
         checksumListView.setItems(FXCollections.observableArrayList(chunkManager.getDuplicatesChecksumSet()));
         if (checksumListView.getItems().contains(selectedChecksum)) {
             checksumListView.getSelectionModel().select(selectedChecksum);
@@ -136,6 +126,7 @@ public class DeleterChunk extends AbstractGUIChunk {
     }
     private VBox makeMassChooserPane() {
         VBox result;
+/*
 
         Function<BiPredicate<File, String>, String> massChooserFunc = fileBiPredicate -> {
             int saveCounter = 0;
@@ -174,6 +165,7 @@ public class DeleterChunk extends AbstractGUIChunk {
             alert.showAndWait();
         });
 
+*/
         HBox.setHgrow(massChooserTF, Priority.ALWAYS);
         HBox textBox = new HBox(5, massChooserLabel, massChooserTF);
         textBox.setAlignment(Pos.CENTER);
@@ -224,12 +216,7 @@ public class DeleterChunk extends AbstractGUIChunk {
         toSetupButton.setOnAction(event -> chunkManager.showSetupNode());
         toRuntimeButton.setOnAction(event -> chunkManager.showRuntimeStatusNode());
         deleteButton.setOnAction(event -> {
-            for (File file : filesThatRemains.keySet()) {
-                if (!file.exists()) {
-                    chunkManager.updateResults();
-                    break;
-                }
-            }
+            Set<File> filesToDelete = chunkManager.getFilesToDelete();
 
             Function<Collection<File>, TextArea> colToTAFunction = files -> {
                 StringJoiner sj = new StringJoiner("\n");
@@ -268,11 +255,9 @@ public class DeleterChunk extends AbstractGUIChunk {
                             chunkManager.showException(e);
                         }
 
-                        fullModelRefresh();
+                        chunkManager.updateResults();
                         progressBar.setManaged(false);
                         reportAlert.showAndWait();
-
-                        updateDuplicatesRepresentation(null);
                     });
         });
 
@@ -288,11 +273,8 @@ public class DeleterChunk extends AbstractGUIChunk {
     }
 
     private void fullModelRefresh() {
-        filesToDelete = new HashSet<>();
-        filesThatRemains = new HashMap<>();
+        chunkManager.removeSelectionsAll();
         chunkManager.updateResults();
-        checksumListView.setItems(FXCollections.observableArrayList(
-                                  chunkManager.getDuplicatesChecksumSet()));
     }
 
     private void selectFileAndDisableButton(File selectedFile) {
@@ -307,40 +289,12 @@ public class DeleterChunk extends AbstractGUIChunk {
         fileListLView.scrollTo(selectedFile);
 
         String checksum = checksumListView.getSelectionModel().getSelectedItem();
-        setToDelAllFilesExceptOne(checksum, selectedFile);
-    }
-
-    private void setToDelAllFilesExceptOne (String fileChecksum, File fileToSave) {
-        List<File> duplicatesList = chunkManager.getListOfDuplicatesCopy(fileChecksum);
-
-        filesToDelete.remove(fileToSave);
-        filesThatRemains.put(fileToSave, fileChecksum);
-        for (File file : duplicatesList) {
-            if (!file.equals(fileToSave)) {
-                filesToDelete.add(file);
-                filesThatRemains.remove(file);
-            }
-        }
+        chunkManager.chooseOneAmongDuplicates(checksum, selectedFile);
     }
 
     public void unselectCurrent() {
         String selectedChecksum = checksumListView.getSelectionModel().getSelectedItem();
-        unselectByChecksum(selectedChecksum);
-    }
-
-    private void unselectByChecksum(String checksum) {
-        if (checksum == null || checksum.equals("")) return;
-
-        List<File> files = chunkManager.getListOfDuplicatesCopy(checksum);
-        files.forEach(file -> {
-            filesToDelete.remove(file);
-            filesThatRemains.remove(file);
-        });
-    }
-
-    public void unselectAll() {
-        filesToDelete = new HashSet<>();
-        filesThatRemains = new HashMap<>();
+        chunkManager.removeSelectionsByChecksum(selectedChecksum);
     }
 
     private void updateDuplicatesRepresentation(String checksum) {
@@ -463,7 +417,7 @@ public class DeleterChunk extends AbstractGUIChunk {
                 chunkManager.showException(e);
             }
             for (File file : fileList) {
-                if (filesThatRemains.containsKey(file)) {
+                if (chunkManager.isFileChosen(file)) {
                     Platform.runLater(() -> selectFileAndDisableButton(file));
                 }
             }

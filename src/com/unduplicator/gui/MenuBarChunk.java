@@ -130,7 +130,6 @@ public class MenuBarChunk extends AbstractGUIChunk {
             return fileChooser;
         };
 
-
         saveMI.setOnAction(event -> {
             File file = fileChooserSupplier.get().showSaveDialog(mainStage);
             if (file != null) {
@@ -155,8 +154,8 @@ public class MenuBarChunk extends AbstractGUIChunk {
     }
 
     private Menu makeEditMenu() {
-        unselectCurrentMI.setOnAction(event -> chunkManager.removeFromDeletionCurrent());
-        unselectAllMI.setOnAction(event -> chunkManager.removeFromDeletionAll());
+        unselectCurrentMI.setOnAction(event -> chunkManager.removeSelectionsCurrent());
+        unselectAllMI.setOnAction(event -> chunkManager.removeSelectionsAll());
 
         deletionEditMenu.getItems().addAll(unselectCurrentMI, unselectAllMI);
         editMenu.getItems().addAll(deletionEditMenu);
