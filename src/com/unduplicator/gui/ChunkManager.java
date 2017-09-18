@@ -104,7 +104,6 @@ public class ChunkManager {
         if (results == null) return 0;
         return results.countDuplicates();
     }
-    @Deprecated
     protected List<File> getListOfDuplicatesCopy(String checksumKey) {
         return results.getFilesListCopy(checksumKey);
     }
@@ -113,6 +112,12 @@ public class ChunkManager {
     }
     protected void chooseOneAmongDuplicates(String checksum, File fileThatRemains) {
         results.chooseOneAmongDuplicates(checksum, fileThatRemains);
+    }
+    protected int[] massChooseByParent(String patternToFind) {
+        return results.massChooseByParent(patternToFind);
+    }
+    protected int[] massChooseByRoot(String patternToFind) {
+        return results.massChooseByRoot(patternToFind);
     }
     protected void removeSelectionsByChecksum(String checksum) {
         results.unselectByChecksum(checksum);

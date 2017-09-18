@@ -7,6 +7,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
 import javafx.geometry.Insets;
+import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
@@ -126,46 +127,29 @@ public class DeleterChunk extends AbstractGUIChunk {
     }
     private VBox makeMassChooserPane() {
         VBox result;
-/*
-
-        Function<BiPredicate<File, String>, String> massChooserFunc = fileBiPredicate -> {
-            int saveCounter = 0;
-            int delCounter = 0;
-            String parentToFind = massChooserTF.getText();
-
-            for (String checksum : chunkManager.getDuplicatesChecksumSet()) {
-                List<File> duplicates = chunkManager.getListOfDuplicatesCopy(checksum);
-                for (File duplicate : duplicates) {
-                    if (fileBiPredicate.test(duplicate, parentToFind)) {
-                        setToDelAllFilesExceptOne(checksum, duplicate);
-                        delCounter += duplicates.size() - 1;
-                        saveCounter++;
-                        break;
-                    }
-                }
-            }
-            return saveCounter + "\n"
-                    + resProvider.getStrFromMessagesBundle("chosenToDelete")
-                    + delCounter;
-        };
-        BiPredicate<File, String> byParent = (file, parentToFind) -> file.getParent().equals(parentToFind);
-        BiPredicate<File, String> byRoot = (file, rootToFind) -> file.getParent().startsWith(rootToFind);
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
 
         chooserByParentButton.setOnAction(event -> {
-            String report = resProvider.getStrFromMessagesBundle("chosenByParent");
-            report += massChooserFunc.apply(byParent);
+            String pattern = massChooserTF.getText();
+            int[] saveAndDel = chunkManager.massChooseByParent(pattern);
+            String report = resProvider.getStrFromMessagesBundle("chosenByParent")
+                    + saveAndDel[0] + "\n"
+                    + resProvider.getStrFromMessagesBundle("chosenToDelete")
+                    + saveAndDel[1];
             alert.setHeaderText(report);
             alert.showAndWait();
         });
         chooserByRootButton.setOnAction(event -> {
-            String report = resProvider.getStrFromMessagesBundle("chosenByRoot");
-            report += massChooserFunc.apply(byRoot);
+            String pattern = massChooserTF.getText();
+            int[] saveAndDel = chunkManager.massChooseByRoot(pattern);
+            String report = resProvider.getStrFromMessagesBundle("chosenByRoot")
+                    + saveAndDel[0] + "\n"
+                    + resProvider.getStrFromMessagesBundle("chosenToDelete")
+                    + saveAndDel[1];
             alert.setHeaderText(report);
             alert.showAndWait();
         });
 
-*/
         HBox.setHgrow(massChooserTF, Priority.ALWAYS);
         HBox textBox = new HBox(5, massChooserLabel, massChooserTF);
         textBox.setAlignment(Pos.CENTER);
@@ -261,7 +245,11 @@ public class DeleterChunk extends AbstractGUIChunk {
                     });
         });
 
-        HBox buttonsBox = new HBox(5,
+        toSetupButton.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        toRuntimeButton.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        deleteButton.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+
+        TilePane buttonsBox = new TilePane(Orientation.HORIZONTAL, 10, 0,
                 toSetupButton,
                 deleteButton,
                 toRuntimeButton);

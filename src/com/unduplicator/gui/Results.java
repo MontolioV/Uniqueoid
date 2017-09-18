@@ -1,13 +1,17 @@
 package com.unduplicator.gui;
 
+import com.unduplicator.ResourcesProvider;
+
 import java.io.*;
 import java.nio.file.NoSuchFileException;
 import java.util.*;
+import java.util.function.BiPredicate;
 
 /**
  * <p>Created by MontolioV on 30.08.17.
  */
 public class Results {
+    private ResourcesProvider resProvider = ResourcesProvider.getInstance();
     private ChunkManager chunkManager;
 
     private Map<String, List<File>> processedFilesMap;
@@ -60,7 +64,6 @@ public class Results {
         processedFilesMap.entrySet().stream().filter(entry -> entry.getValue().size() > 1).forEach(entry -> duplicateChSumSet.add(entry.getKey()));
     }
 
-    @Deprecated
     protected List<File> getFilesListCopy(String checksumKey) {
         for (File file : processedFilesMap.get(checksumKey)) {
             if (!file.exists()) {
@@ -102,6 +105,35 @@ public class Results {
             filesThatRemains.remove(fileToDelete);
             filesToDelete.add(fileToDelete);
         });
+    }
+
+    protected int[] massChooseByParent(String patternToFind) {
+        BiPredicate<File, String> byParent = (file, parentToFind) -> file.getParent().equals(parentToFind);
+        return massChoose(byParent, patternToFind);
+    }
+
+    protected int[] massChooseByRoot(String patternToFind) {
+        BiPredicate<File, String> byRoot = (file, rootToFind) -> file.getParent().startsWith(rootToFind);
+        return massChoose(byRoot, patternToFind);
+    }
+
+    private int[] massChoose(BiPredicate<File, String> chooseCondition, String patternToFind) {
+        int saveCounter = 0;
+        int delCounter = 0;
+
+        for (String checksum : duplicateChSumSet) {
+            List<File> duplicates = processedFilesMap.get(checksum);
+            for (File duplicate : duplicates) {
+                if (chooseCondition.test(duplicate, patternToFind)) {
+                    chooseOneAmongDuplicates(checksum, duplicate);
+                    delCounter += duplicates.size() - 1;
+                    saveCounter++;
+                    break;
+                }
+            }
+        }
+        int[] result = {saveCounter, delCounter};
+        return result;
     }
 
     protected void unselectByChecksum(String checksum) {

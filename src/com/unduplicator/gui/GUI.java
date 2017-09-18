@@ -10,8 +10,7 @@ import javafx.scene.control.TextArea;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
+import java.io.*;
 
 /**
  * <p>Created by MontolioV on 30.08.17.
@@ -22,8 +21,76 @@ public class GUI extends Application{
     private Stage primaryStage;
     private ChunkManager chunkManager;
 
+    private Scene mainScene;
+    private double width = 700;
+    private double height = 600;
+    private boolean isFullScreen = false;
+
     public static void main(String[] args) {
         launch(args);
+    }
+
+    /**
+     * The application initialization method. This method is called immediately
+     * after the Application class is loaded and constructed. An application may
+     * override this method to perform initialization prior to the actual starting
+     * of the application.
+     * <p>
+     * <p>
+     * The implementation of this method provided by the Application class does nothing.
+     * </p>
+     * <p>
+     * <p>
+     * NOTE: This method is not called on the JavaFX Application Thread. An
+     * application must not construct a Scene or a Stage in this
+     * method.
+     * An application may construct other JavaFX objects in this method.
+     * </p>
+     */
+    @Override
+    public void init() throws Exception {
+        super.init();
+
+        double tmpWidth = 0;
+        double tmpHeight = 0;
+        try (BufferedReader br = new BufferedReader(new FileReader(
+                System.getProperty("user.dir") + "/Unduplicator/settings.txt"))) {
+            tmpWidth = Double.parseDouble(br.readLine().split("=")[1]);
+            tmpHeight = Double.parseDouble(br.readLine().split("=")[1]);
+            isFullScreen = Boolean.parseBoolean(br.readLine().split("=")[1]);
+        } catch (Throwable throwable) {
+            throwable.printStackTrace();
+        }
+        if (tmpWidth>200) width = tmpWidth;
+        if (tmpHeight>200) height = tmpHeight;
+    }
+
+    /**
+     * This method is called when the application should stop, and provides a
+     * convenient place to prepare for application exit and destroy resources.
+     * <p>
+     * <p>
+     * The implementation of this method provided by the Application class does nothing.
+     * </p>
+     * <p>
+     * <p>
+     * NOTE: This method is called on the JavaFX Application Thread.
+     * </p>
+     */
+    @Override
+    public void stop() throws Exception {
+        super.stop();
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(
+                System.getProperty("user.dir") + "/Unduplicator/settings.txt"))) {
+            bw.write("height=" + String.valueOf(mainScene.getHeight()));
+            bw.newLine();
+            bw.write("width=" + String.valueOf(mainScene.getWidth()));
+            bw.newLine();
+            bw.write("fullscreen=" + String.valueOf(getPrimaryStage().isFullScreen()));
+            bw.newLine();
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
     }
 
     /**
@@ -45,9 +112,10 @@ public class GUI extends Application{
     public void start(Stage primaryStage) throws Exception {
         this.primaryStage = primaryStage;
         chunkManager = new ChunkManager(this);
-        Scene mainScene = new Scene(appPane, 700, 600);
+        mainScene = new Scene(appPane, 700, 600);
         primaryStage.setScene(mainScene);
         primaryStage.setTitle("Unduplicator");
+        primaryStage.setFullScreen(isFullScreen);
         primaryStage.show();
     }
 
