@@ -54,15 +54,15 @@ public class GUI extends Application{
         double tmpWidth = 0;
         double tmpHeight = 0;
         try (BufferedReader br = new BufferedReader(new FileReader(
-                System.getProperty("user.dir") + "/Unduplicator/settings.txt"))) {
-            tmpWidth = Double.parseDouble(br.readLine().split("=")[1]);
+                System.getProperty("user.dir") + "/settings.txt"))) {
             tmpHeight = Double.parseDouble(br.readLine().split("=")[1]);
+            tmpWidth = Double.parseDouble(br.readLine().split("=")[1]);
             isFullScreen = Boolean.parseBoolean(br.readLine().split("=")[1]);
         } catch (Throwable throwable) {
             throwable.printStackTrace();
         }
-        if (tmpWidth>200) width = tmpWidth;
-        if (tmpHeight>200) height = tmpHeight;
+        if (tmpHeight > 400) height = tmpHeight;
+        if (tmpWidth > 400) width = tmpWidth;
     }
 
     /**
@@ -81,7 +81,7 @@ public class GUI extends Application{
     public void stop() throws Exception {
         super.stop();
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(
-                System.getProperty("user.dir") + "/Unduplicator/settings.txt"))) {
+                System.getProperty("user.dir") + "/settings.txt"))) {
             bw.write("height=" + String.valueOf(mainScene.getHeight()));
             bw.newLine();
             bw.write("width=" + String.valueOf(mainScene.getWidth()));
@@ -112,7 +112,7 @@ public class GUI extends Application{
     public void start(Stage primaryStage) throws Exception {
         this.primaryStage = primaryStage;
         chunkManager = new ChunkManager(this);
-        mainScene = new Scene(appPane, 700, 600);
+        mainScene = new Scene(appPane, width, height);
         primaryStage.setScene(mainScene);
         primaryStage.setTitle("Unduplicator");
         primaryStage.setFullScreen(isFullScreen);

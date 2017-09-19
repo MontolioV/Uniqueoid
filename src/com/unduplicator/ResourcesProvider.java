@@ -34,7 +34,7 @@ public class ResourcesProvider {
 
     protected Locale getSavedLocale() {
         try (ObjectInputStream ois = new ObjectInputStream(
-                                     new FileInputStream(System.getProperty("user.dir") + "/Unduplicator/locale.ser")))
+                                     new FileInputStream(System.getProperty("user.dir") + "/locale.ser")))
         {
             return (Locale) ois.readObject();
         } catch (IOException | ClassNotFoundException e) {
@@ -45,7 +45,7 @@ public class ResourcesProvider {
 
     protected boolean saveLocale() {
         try (ObjectOutputStream oos = new ObjectOutputStream(
-                                      new FileOutputStream(System.getProperty("user.dir") + "/Unduplicator/locale.ser")))
+                                      new FileOutputStream(System.getProperty("user.dir") + "/locale.ser")))
         {
             oos.writeObject(currentLocal);
             return true;
