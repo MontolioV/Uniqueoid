@@ -28,6 +28,7 @@ public class ResourcesProvider {
         Set<Locale> result = new HashSet<>();
         result.add(new Locale("en", "EN"));
         result.add(new Locale("ru", "RU"));
+        result.add(new Locale("uk", "UA"));
 
         supportedLocales = Collections.unmodifiableSet(result);
     }

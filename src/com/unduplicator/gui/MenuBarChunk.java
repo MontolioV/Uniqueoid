@@ -1,11 +1,15 @@
 package com.unduplicator.gui;
 
+import com.sun.javafx.scene.control.behavior.TextBinding;
 import com.unduplicator.ResourcesProvider;
 import javafx.application.Platform;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyCombination;
 import javafx.stage.FileChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Stage;
@@ -144,6 +148,10 @@ public class MenuBarChunk extends AbstractGUIChunk {
         });
         exitMI.setOnAction(event -> Platform.exit());
 
+        saveMI.setAccelerator(new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN));
+        loadMI.setAccelerator(new KeyCodeCombination(KeyCode.L, KeyCombination.CONTROL_DOWN));
+        exitMI.setAccelerator(new KeyCodeCombination(KeyCode.Q, KeyCombination.CONTROL_DOWN));
+
         fileMenu.getItems().addAll(
                 saveMI,
                 loadMI,
@@ -157,6 +165,9 @@ public class MenuBarChunk extends AbstractGUIChunk {
         unselectCurrentMI.setOnAction(event -> chunkManager.removeSelectionsCurrent());
         unselectAllMI.setOnAction(event -> chunkManager.removeSelectionsAll());
 
+        unselectCurrentMI.setAccelerator(new KeyCodeCombination(KeyCode.Z, KeyCombination.ALT_DOWN));
+        unselectAllMI.setAccelerator(new KeyCodeCombination(KeyCode.A, KeyCombination.ALT_DOWN));
+
         deletionEditMenu.getItems().addAll(unselectCurrentMI, unselectAllMI);
         editMenu.getItems().addAll(deletionEditMenu);
         return editMenu;
@@ -166,6 +177,10 @@ public class MenuBarChunk extends AbstractGUIChunk {
         setupPanelMI.setOnAction(event -> chunkManager.showSetupNode());
         runtimePanelMI.setOnAction(event -> chunkManager.showRuntimeStatusNode());
         deletionPanelMI.setOnAction(event -> chunkManager.showDeletionNode());
+
+        setupPanelMI.setAccelerator(new KeyCodeCombination(KeyCode.Q, KeyCombination.ALT_DOWN));
+        runtimePanelMI.setAccelerator(new KeyCodeCombination(KeyCode.W, KeyCombination.ALT_DOWN));
+        deletionPanelMI.setAccelerator(new KeyCodeCombination(KeyCode.E, KeyCombination.ALT_DOWN));
 
         panelsMenu.getItems().addAll(setupPanelMI, runtimePanelMI, deletionPanelMI);
         return panelsMenu;
