@@ -1,7 +1,6 @@
 package com.unduplicator;
 
 import java.io.*;
-import java.lang.reflect.Array;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -58,21 +57,6 @@ public class DirectoryHandler extends RecursiveAction {
                             QUEUE_EX_MESSAGES);
                     task.fork();
                     tasks.add(task);
-
-/*
-                    for (File fileFromDir : file.listFiles()) {
-                        if (fileFromDir.isFile()) {
-                            processFile(fileFromDir);
-                        } else {
-                            DirectoryHandler task = new DirectoryHandler(fileFromDir,
-                                    HASH_ALGORITHM,
-                                    QUEUE_FILE_AND_CHECKSUM,
-                                    QUEUE_EX_MESSAGES);
-                            task.fork();
-                            tasks.add(task);
-                        }
-                    }
-*/
                 }
             } else {
                 QUEUE_EX_MESSAGES.offer(
