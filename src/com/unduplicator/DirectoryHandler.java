@@ -1,6 +1,7 @@
 package com.unduplicator;
 
 import java.io.*;
+import java.nio.file.Files;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -43,7 +44,18 @@ public class DirectoryHandler extends RecursiveAction {
         File[] remainder = splitLargeDirectory();
 
         for (File file : remainder) {
-            if (file.isFile()) {
+            if (Files.isSymbolicLink(file.toPath())) {
+                try {
+                    QUEUE_EX_MESSAGES.offer(
+                                    "\n"
+                                    + resProvider.getStrFromMessagesBundle("isLink")
+                                    + "\n" + resProvider.getStrFromMessagesBundle("link") + file.toString()
+                                    + "\n" + resProvider.getStrFromMessagesBundle("realPath") + file.toPath().toRealPath().toString()
+                                    + "\n");
+                } catch (IOException e) {
+                    exceptionToQueue(e);
+                }
+            } else if (file.isFile()) {
                 processFile(file);
             } else if (file.isDirectory()) {
                 if (file.listFiles() == null) {
@@ -72,18 +84,24 @@ public class DirectoryHandler extends RecursiveAction {
         try {
             FileAndChecksum pair = new FileAndChecksum(file, CHECKSUM_MAKER.makeCheckSum(file));
             QUEUE_FILE_AND_CHECKSUM.offer(pair);
-        } catch (IOException e) {
-            StringJoiner sj = new StringJoiner("\n");
-            sj.add(e.toString());
-
-            Exception causeExc = (Exception) e.getCause();
-            while (causeExc != null) {
-                sj.add(causeExc.toString());
-                causeExc = (Exception) causeExc.getCause();
-            }
-
-            QUEUE_EX_MESSAGES.offer(sj.toString());
+        } catch (IOException ex) {
+            exceptionToQueue(ex);
         }
+    }
+
+    private void exceptionToQueue(Exception ex) {
+        ex.printStackTrace();
+
+        StringJoiner sj = new StringJoiner("\n");
+        sj.add(ex.toString());
+
+        Exception causeExc = (Exception) ex.getCause();
+        while (causeExc != null) {
+            sj.add(causeExc.toString());
+            causeExc = (Exception) causeExc.getCause();
+        }
+
+        QUEUE_EX_MESSAGES.offer(sj.toString());
     }
 
     private File[] splitLargeDirectory() {
