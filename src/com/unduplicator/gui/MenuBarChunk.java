@@ -1,12 +1,8 @@
 package com.unduplicator.gui;
 
-import com.sun.javafx.scene.control.behavior.TextBinding;
 import com.unduplicator.ResourcesProvider;
 import javafx.application.Platform;
-import javafx.scene.control.Menu;
-import javafx.scene.control.MenuBar;
-import javafx.scene.control.MenuItem;
-import javafx.scene.control.SeparatorMenuItem;
+import javafx.scene.control.*;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
@@ -14,10 +10,11 @@ import javafx.stage.FileChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Stage;
 
-import java.io.File;
+import java.io.*;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.StringJoiner;
 import java.util.function.Supplier;
 
 /**
@@ -47,7 +44,7 @@ public class MenuBarChunk extends AbstractGUIChunk {
     private Map<Locale, MenuItem> languageMIMap = new HashMap<>();
 
     private Menu helpMenu = new Menu();
-
+    private MenuItem licenseMI = new MenuItem();
 
     public MenuBarChunk(ChunkManager chunkManager, Stage mainStage) {
         this.chunkManager = chunkManager;
@@ -83,6 +80,7 @@ public class MenuBarChunk extends AbstractGUIChunk {
         }
 
         helpMenu.setText(resProvider.getStrFromGUIBundle("helpMenu"));
+        licenseMI.setText(resProvider.getStrFromGUIBundle("licenseMI"));
     }
 
     @Override
@@ -200,7 +198,29 @@ public class MenuBarChunk extends AbstractGUIChunk {
     }
 
     private Menu makeHelpMenu() {
+        licenseMI.setOnAction(event -> {
+            try (BufferedReader br = new BufferedReader(
+                                     new InputStreamReader(
+                                     getClass().getClassLoader().getResourceAsStream("LICENSE"))))
+            {
+                StringJoiner sj = new StringJoiner("\n");
+                String tmpS;
+                while ((tmpS = br.readLine()) != null) {
+                    sj.add(tmpS);
+                }
 
+                TextArea ta = new TextArea();
+                ta.setWrapText(true);
+                ta.setEditable(false);
+                ta.setPrefHeight(500);
+                ta.setText(sj.toString());
+                chunkManager.showInNewStage(ta);
+            } catch (IOException e) {
+                chunkManager.showException(e);
+            }
+        });
+
+        helpMenu.getItems().addAll(licenseMI);
         return helpMenu;
     }
 

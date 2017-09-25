@@ -1,6 +1,7 @@
 package com.unduplicator.gui;
 
 import com.unduplicator.FindDuplicatesTask;
+import javafx.scene.Parent;
 import javafx.scene.control.Alert;
 
 import java.io.File;
@@ -64,6 +65,9 @@ public class ChunkManager {
     }
     protected void resizeAlertManually(Alert alert) {
         GUI.resizeAlertManually(alert);
+    }
+    protected void showInNewStage(Parent parent) {
+        GUI.showInNewStage(parent);
     }
 
     //Update all chunks

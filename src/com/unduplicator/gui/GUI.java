@@ -4,6 +4,7 @@ import com.unduplicator.ResourcesProvider;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.TextArea;
@@ -160,5 +161,13 @@ public class GUI extends Application{
 
     protected boolean isNodeShownInCenter(Node node) {
         return appPane.getCenter().equals(node);
+    }
+
+    protected void showInNewStage(Parent parent) {
+        Scene scene = new Scene(parent);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.sizeToScene();
+        stage.show();
     }
 }
