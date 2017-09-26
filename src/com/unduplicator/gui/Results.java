@@ -18,6 +18,7 @@ public class Results {
     private Set<String> duplicateChSumSet;
     private Set<File> filesToDelete = new HashSet<>();
     private Map<File, String> filesThatRemains = new HashMap<>();
+    private Set<String> duplicateChoiceMade = new HashSet<>();
 
     public Results(ChunkManager chunkManager, Map<String, List<File>> processedFilesMap) {
         this.processedFilesMap = processedFilesMap;
@@ -105,6 +106,8 @@ public class Results {
             filesThatRemains.remove(fileToDelete);
             filesToDelete.add(fileToDelete);
         });
+        duplicateChoiceMade.add(checksum);
+        chunkManager.updateChecksumRepresentation();
     }
 
     protected int[] massChooseByParent(String patternToFind) {
@@ -146,11 +149,13 @@ public class Results {
                 filesThatRemains.remove(file);
             });
         }
+        duplicateChoiceMade.remove(checksum);
     }
 
     protected void unselectAll() {
         filesToDelete = new HashSet<>();
         filesThatRemains = new HashMap<>();
+        duplicateChoiceMade = new HashSet<>();
     }
 
     protected Set<File> getFilesThatRemains() {
@@ -181,5 +186,9 @@ public class Results {
 
     protected boolean isFileChosen(File file) {
         return filesThatRemains.containsKey(file);
+    }
+
+    protected boolean isChoiceMadeOnChecksum(String checksum) {
+        return duplicateChoiceMade.contains(checksum);
     }
 }

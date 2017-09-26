@@ -139,6 +139,9 @@ public class ChunkManager {
     protected boolean isFileChosen(File file) {
         return results.isFileChosen(file);
     }
+    protected boolean isChoiceMadeOnChecksum(String checksum) {
+        return results.isChoiceMadeOnChecksum(checksum);
+    }
 
 
     //Memory saving
@@ -161,5 +164,8 @@ public class ChunkManager {
         if (deleterChunk != null) {
             deleterChunk.updateChunk();
         }
+    }
+    protected void updateChecksumRepresentation() {
+        deleterChunk.updateChecksumTextRepresentation();
     }
 }

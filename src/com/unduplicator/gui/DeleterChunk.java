@@ -13,6 +13,7 @@ import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
+import javafx.scene.text.Text;
 
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -24,7 +25,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BiPredicate;
 import java.util.function.Function;
 
 /**
@@ -37,8 +37,9 @@ public class DeleterChunk extends AbstractGUIChunk {
     private Task<Void> showDuplicatesTask;
 
     private HashMap<File, Button> fileButtonHashMap;
-    private ListView<String> checksumListView = new ListView<>();
+    private ListView<Text> checksumListView = new ListView<>();
     private ListView<File> fileListLView;
+    private Set<Text> checksumTextSet;
 
     private TilePane previewPane;
     private GridPane centerGrid;
@@ -81,14 +82,22 @@ public class DeleterChunk extends AbstractGUIChunk {
     }
 
     public void updateChunk() {
-        String selectedChecksum = checksumListView.getSelectionModel().getSelectedItem();
-
-        checksumListView.setItems(FXCollections.observableArrayList(chunkManager.getDuplicatesChecksumSet()));
-        if (checksumListView.getItems().contains(selectedChecksum)) {
-            checksumListView.getSelectionModel().select(selectedChecksum);
-        } else {
-            updateDuplicatesRepresentation(null);
+        String selectedChecksum = null;
+        if (checksumListView.getSelectionModel().getSelectedItem() != null) {
+            selectedChecksum = checksumListView.getSelectionModel().getSelectedItem().getText();
         }
+
+        updateChecksumListView();
+
+        if (selectedChecksum != null) {
+            for (Text text : checksumListView.getItems()) {
+                if (text.getText().equals(selectedChecksum)) {
+                    checksumListView.getSelectionModel().select(text);
+                    return;
+                }
+            }
+        }
+        updateDuplicatesRepresentation(null);
     }
 
     private BorderPane makePane() {
@@ -123,7 +132,12 @@ public class DeleterChunk extends AbstractGUIChunk {
         fullModelRefresh();
         checksumListView.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
         checksumListView.getSelectionModel().selectedItemProperty().addListener(
-                (observable, oldValue, newValue) -> updateDuplicatesRepresentation(newValue));
+                (observable, oldValue, newValue) -> {
+                    updateChecksumTextRepresentation();
+                    if (newValue != null) {
+                        updateDuplicatesRepresentation(newValue.getText());
+                    }
+                });
     }
     private VBox makeMassChooserPane() {
         VBox result;
@@ -137,6 +151,8 @@ public class DeleterChunk extends AbstractGUIChunk {
                     + resProvider.getStrFromMessagesBundle("chosenToDelete")
                     + saveAndDel[1];
             alert.setHeaderText(report);
+
+            updateChecksumTextRepresentation();
             alert.showAndWait();
         });
         chooserByRootButton.setOnAction(event -> {
@@ -147,6 +163,8 @@ public class DeleterChunk extends AbstractGUIChunk {
                     + resProvider.getStrFromMessagesBundle("chosenToDelete")
                     + saveAndDel[1];
             alert.setHeaderText(report);
+
+            updateChecksumTextRepresentation();
             alert.showAndWait();
         });
 
@@ -276,12 +294,12 @@ public class DeleterChunk extends AbstractGUIChunk {
         fileListLView.getSelectionModel().select(selectedFile);
         fileListLView.scrollTo(selectedFile);
 
-        String checksum = checksumListView.getSelectionModel().getSelectedItem();
+        String checksum = checksumListView.getSelectionModel().getSelectedItem().getText();
         chunkManager.chooseOneAmongDuplicates(checksum, selectedFile);
     }
 
     public void unselectCurrent() {
-        String selectedChecksum = checksumListView.getSelectionModel().getSelectedItem();
+        String selectedChecksum = checksumListView.getSelectionModel().getSelectedItem().getText();
         chunkManager.removeSelectionsByChecksum(selectedChecksum);
     }
 
@@ -415,5 +433,28 @@ public class DeleterChunk extends AbstractGUIChunk {
         thread.setDaemon(true);
         thread.start();
 
+    }
+
+    private void updateChecksumListView() {
+        checksumTextSet = new HashSet<>();
+        ObservableList<Text> obsList = FXCollections.observableArrayList();
+        for (String checksum : chunkManager.getDuplicatesChecksumSet()) {
+            Text textChecksum = new Text(checksum);
+            checksumTextSet.add(textChecksum);
+            obsList.add(textChecksum);
+        }
+
+        updateChecksumTextRepresentation();
+        checksumListView.setItems(obsList);
+    }
+
+    protected void updateChecksumTextRepresentation() {
+        for (Text text : checksumTextSet) {
+            if (chunkManager.isChoiceMadeOnChecksum(text.getText())) {
+                text.setStyle("-fx-font-weight: normal");
+            } else {
+                text.setStyle("-fx-font-weight: bolder");
+            }
+        }
     }
 }
