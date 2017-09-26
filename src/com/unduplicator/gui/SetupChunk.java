@@ -12,9 +12,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.Separator;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
@@ -22,6 +20,8 @@ import javafx.stage.Stage;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Represents gui entity that is responsible for task set up.
@@ -34,10 +34,11 @@ public class SetupChunk extends AbstractGUIChunk {
     private List<File> chosenFiles = new ArrayList<>();
     private String chosenAlgorithm = "SHA-256";
 
-    private Button startButton = new Button();
     private Button addDirectoryButton = new Button();
     private Button addFileButton = new Button();
     private Button clearDirsButton = new Button();
+    private Button startButton = new Button();
+    private Button addToResultsButton = new Button();
 
     private Label headerLabel = new Label();
     private Label algorithmLabel = new Label();
@@ -54,6 +55,7 @@ public class SetupChunk extends AbstractGUIChunk {
     @Override
     public void updateLocaleContent() {
         startButton.setText(resProvider.getStrFromGUIBundle("startButton"));
+        addToResultsButton.setText((resProvider.getStrFromGUIBundle("addToResultsButton")));
         addDirectoryButton.setText(resProvider.getStrFromGUIBundle("addDirectoryButton"));
         addFileButton.setText(resProvider.getStrFromGUIBundle("addFileButton"));
         clearDirsButton.setText(resProvider.getStrFromGUIBundle("clearDirsButton"));
@@ -76,12 +78,15 @@ public class SetupChunk extends AbstractGUIChunk {
 
                 case NO_RESULTS:
                     startButton.setDisable(false);
+                    addToResultsButton.setDisable(true);
                     break;
                 case RUNNING:
                     startButton.setDisable(true);
+                    addToResultsButton.setDisable(true);
                     break;
                 case HAS_RESULTS:
                     startButton.setDisable(false);
+                    addToResultsButton.setDisable(false);
                     break;
             }
             return true;
@@ -150,12 +155,32 @@ public class SetupChunk extends AbstractGUIChunk {
 
         //Start button
         startButton.setDisable(true);
-        startButton.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        startButton.setMaxWidth(Double.MAX_VALUE);
+        startButton.setPrefHeight(40);
+        //AddToResults button
+//        addToResultsButton.managedProperty().bind(addToResultsButton.disabledProperty().not());
+//        addToResultsButton.visibleProperty().bind(addToResultsButton.disabledProperty().not());
+        addToResultsButton.setDisable(true);
+        addToResultsButton.setMaxWidth(Double.MAX_VALUE);
+        addToResultsButton.setPrefHeight(40);
+
+        GridPane bottomGridPane = new GridPane();
+        ColumnConstraints cCons0 = new ColumnConstraints();
+        ColumnConstraints cCons1 = new ColumnConstraints();
+        ColumnConstraints cCons2 = new ColumnConstraints();
+        cCons0.setPercentWidth(3);
+        cCons1.setPercentWidth(94);
+        cCons2.setPercentWidth(3);
+        bottomGridPane.getColumnConstraints().addAll(cCons0, cCons1, cCons2);
+        bottomGridPane.add(startButton, 0, 0, 2, 1);
+        bottomGridPane.add(addToResultsButton, 1, 1, 2, 1);
+        bottomGridPane.setVgap(5);
+
 
         BorderPane borderPane = new BorderPane();
         borderPane.setCenter(displayPanel);
         borderPane.setLeft(controlPanel);
-        borderPane.setBottom(startButton);
+        borderPane.setBottom(bottomGridPane);
         borderPane.setPadding(new Insets(20));
 
         return borderPane;
@@ -165,8 +190,14 @@ public class SetupChunk extends AbstractGUIChunk {
         startButton.setOnAction(eventHandler);
         startButton.setDisable(false);
     }
+    protected void setAddToResultsButtonHandler(EventHandler<ActionEvent> eventHandler) {
+        addToResultsButton.setOnAction(eventHandler);
+    }
 
-    protected FindDuplicatesTask getTask () {
+    protected FindDuplicatesTask getStartTask() {
         return new FindDuplicatesTask(chosenFiles, chosenAlgorithm);
+    }
+    protected FindDuplicatesTask getAddToResultsTask(Map<String, Set<File>> previousResult) {
+        return new FindDuplicatesTask(chosenFiles, chosenAlgorithm, previousResult);
     }
 }

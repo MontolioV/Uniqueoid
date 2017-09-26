@@ -1,6 +1,7 @@
 package com.unduplicator.gui;
 
 import com.unduplicator.ResourcesProvider;
+import javafx.concurrent.Task;
 
 import java.io.*;
 import java.nio.file.NoSuchFileException;
@@ -190,5 +191,9 @@ public class Results {
 
     protected boolean isChoiceMadeOnChecksum(String checksum) {
         return duplicateChoiceMade.contains(checksum);
+    }
+
+    protected Task<Map<String, Set<File>>> addToPreviousResultTask() {
+        return chunkManager.getAddToResultsTask(processedFilesMap);
     }
 }

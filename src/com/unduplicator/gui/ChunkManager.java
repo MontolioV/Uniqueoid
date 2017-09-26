@@ -34,7 +34,8 @@ public class ChunkManager {
         runtimeChunk = new RuntimeStatusChunk(this);
         setupChunk = new SetupChunk(GUI.getPrimaryStage());
 
-        setupChunk.setStartButtonHandler(runtimeChunk.getStartButHandler());
+        setupChunk.setStartButtonHandler(runtimeChunk.getStartButHandler(
+                                         setupChunk.getStartTask()));
 
         chunks.add(menuBarChunk);
         chunks.add(runtimeChunk);
@@ -44,6 +45,9 @@ public class ChunkManager {
         deleterChunk = new DeleterChunk(this);
         deleterChunk.updateChunk();
         chunks.add(deleterChunk);
+
+        setupChunk.setAddToResultsButtonHandler(runtimeChunk.getStartButHandler(
+                                                results.addToPreviousResultTask()));
     }
 
     //Show in GUI
@@ -79,8 +83,8 @@ public class ChunkManager {
     }
 
     //Results object
-    protected void setResults(HashMap<String, Set<File>> processedFilesHM) {
-        results = new Results(this, processedFilesHM);
+    protected void setResults(Map<String, Set<File>> processedFilesMap) {
+        results = new Results(this, processedFilesMap);
     }
     protected void saveResults(File file) {
         results.saveToFile(file);
@@ -151,8 +155,8 @@ public class ChunkManager {
     }
 
     //Setup chunk features
-    protected FindDuplicatesTask getTask() {
-        return setupChunk.getTask();
+    protected FindDuplicatesTask getAddToResultsTask(Map<String, Set<File>> previousResult) {
+        return setupChunk.getAddToResultsTask(previousResult);
     }
 
     //Deleter chunk features

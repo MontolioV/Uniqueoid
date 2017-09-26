@@ -35,7 +35,7 @@ public class FindDuplicatesTaskTest {
 
     @Test
     public void call() throws Exception {
-        HashMap<String, Set<File>> result;
+        Map<String, Set<File>> result;
         task = new FindDuplicatesTask(dirList, algorithm);
 
         //Prepare control hashmap

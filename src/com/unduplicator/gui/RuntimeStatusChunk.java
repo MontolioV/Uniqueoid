@@ -2,6 +2,7 @@ package com.unduplicator.gui;
 
 import com.unduplicator.FindDuplicatesTask;
 import com.unduplicator.ResourcesProvider;
+import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
@@ -15,6 +16,9 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.TilePane;
 import javafx.scene.layout.VBox;
 
+import java.io.File;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
 /**
@@ -24,7 +28,7 @@ public class RuntimeStatusChunk extends AbstractGUIChunk {
     private ResourcesProvider resProvider = ResourcesProvider.getInstance();
     private ChunkManager chunkManager;
 
-    private FindDuplicatesTask task;
+    private Task<Map<String, Set<File>>> task;
 
     private Button stopButton = new Button();
     private Button toSetupBut = new Button();
@@ -119,9 +123,9 @@ public class RuntimeStatusChunk extends AbstractGUIChunk {
         return runtimePane;
     }
 
-    public EventHandler<ActionEvent> getStartButHandler() {
+    public EventHandler<ActionEvent> getStartButHandler(Task<Map<String, Set<File>>> task) {
         EventHandler<ActionEvent> startButHandler = event -> {
-            this.task = chunkManager.getTask();
+            this.task = task;
 
             long startTime = System.currentTimeMillis();
             messagesTA.clear();

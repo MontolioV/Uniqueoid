@@ -11,9 +11,10 @@ import java.util.concurrent.*;
  * Groups files by their checksum so that copies are easy to find.
  * <p>Created by MontolioV on 12.06.17.
  */
-public class FindDuplicatesTask extends Task<HashMap<String, Set<File>>> {
+public class FindDuplicatesTask extends Task<Map<String, Set<File>>> {
     private final List<File> DIRECTORIES;
     private final String HASH_ALGORITHM;
+    private Map<String, Set<File>> mapToReturn = new HashMap<>();
     private int filesCounter = 0;
     private int filesTotal = 0;
     private ConcurrentLinkedQueue<FileAndChecksum> queueProcessed = new ConcurrentLinkedQueue<>();
@@ -27,6 +28,11 @@ public class FindDuplicatesTask extends Task<HashMap<String, Set<File>>> {
         this.DIRECTORIES = directories;
         HASH_ALGORITHM = hash_algorithm;
     }
+    public FindDuplicatesTask(List<File> directories, String hash_algorithm, Map<String, Set<File>> previousResult) {
+        this(directories, hash_algorithm);
+        mapToReturn = previousResult;
+    }
+
 
     /**
      * Invoked when the Task is executed. The call method actually performs the
@@ -41,10 +47,11 @@ public class FindDuplicatesTask extends Task<HashMap<String, Set<File>>> {
      *                   background operation
      */
     @Override
-    protected HashMap<String, Set<File>> call() throws Exception {
+    protected Map<String, Set<File>> call() throws Exception {
         preparations();
         runTasksInNewThread();
-        return controlAndOutputResult();
+        controlAndOutputResult();
+        return mapToReturn;
     }
 
     private void preparations() {
@@ -96,9 +103,7 @@ public class FindDuplicatesTask extends Task<HashMap<String, Set<File>>> {
         fjThread.start();
     }
 
-    private HashMap<String, Set<File>> controlAndOutputResult() throws InterruptedException {
-        HashMap<String, Set<File>> result = new HashMap<>();
-
+    private void controlAndOutputResult() throws InterruptedException {
         while (fjThread.isAlive() || !queueProcessed.isEmpty() || !queueExMessages.isEmpty()) {
             //Cancellation
             if (isCancelled()) {
@@ -117,11 +122,11 @@ public class FindDuplicatesTask extends Task<HashMap<String, Set<File>>> {
             if (!queueProcessed.isEmpty()) {
                 FileAndChecksum pair = queueProcessed.poll();
                 //Here we find duplicated files
-                Set<File> copies = result.get(pair.getChecksum());
+                Set<File> copies = mapToReturn.get(pair.getChecksum());
                 if (copies == null) {
                     Set<File> newList = new HashSet<>();
                     newList.add(pair.getFile());
-                    result.put(pair.getChecksum(), newList);
+                    mapToReturn.put(pair.getChecksum(), newList);
                 } else {
                     if (!copies.contains(pair.getFile())) {
                         copies.add(pair.getFile());
@@ -142,6 +147,5 @@ public class FindDuplicatesTask extends Task<HashMap<String, Set<File>>> {
 
         //Just to be sure
         fjThread.join();
-        return result;
     }
 }
