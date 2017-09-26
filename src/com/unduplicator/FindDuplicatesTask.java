@@ -11,7 +11,7 @@ import java.util.concurrent.*;
  * Groups files by their checksum so that copies are easy to find.
  * <p>Created by MontolioV on 12.06.17.
  */
-public class FindDuplicatesTask extends Task<HashMap<String, List<File>>> {
+public class FindDuplicatesTask extends Task<HashMap<String, Set<File>>> {
     private final List<File> DIRECTORIES;
     private final String HASH_ALGORITHM;
     private int filesCounter = 0;
@@ -41,7 +41,7 @@ public class FindDuplicatesTask extends Task<HashMap<String, List<File>>> {
      *                   background operation
      */
     @Override
-    protected HashMap<String, List<File>> call() throws Exception {
+    protected HashMap<String, Set<File>> call() throws Exception {
         preparations();
         runTasksInNewThread();
         return controlAndOutputResult();
@@ -96,8 +96,8 @@ public class FindDuplicatesTask extends Task<HashMap<String, List<File>>> {
         fjThread.start();
     }
 
-    private HashMap<String, List<File>> controlAndOutputResult() throws InterruptedException {
-        HashMap<String, List<File>> result = new HashMap<>();
+    private HashMap<String, Set<File>> controlAndOutputResult() throws InterruptedException {
+        HashMap<String, Set<File>> result = new HashMap<>();
 
         while (fjThread.isAlive() || !queueProcessed.isEmpty() || !queueExMessages.isEmpty()) {
             //Cancellation
@@ -117,13 +117,15 @@ public class FindDuplicatesTask extends Task<HashMap<String, List<File>>> {
             if (!queueProcessed.isEmpty()) {
                 FileAndChecksum pair = queueProcessed.poll();
                 //Here we find duplicated files
-                List<File> copies = result.get(pair.getChecksum());
+                Set<File> copies = result.get(pair.getChecksum());
                 if (copies == null) {
-                    List<File> newList = new ArrayList<>();
+                    Set<File> newList = new HashSet<>();
                     newList.add(pair.getFile());
                     result.put(pair.getChecksum(), newList);
                 } else {
-                    copies.add(pair.getFile());
+                    if (!copies.contains(pair.getFile())) {
+                        copies.add(pair.getFile());
+                    }
                 }
 
                 filesCounter++;

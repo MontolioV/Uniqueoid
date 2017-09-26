@@ -316,7 +316,7 @@ public class DeleterChunk extends AbstractGUIChunk {
 
         double width = 200;
         double height = 200;
-        List<File> fileList = chunkManager.getListOfDuplicatesCopy(checksum);
+        Set<File> duplicateFiles = chunkManager.getDuplicateFilesCopy(checksum);
         ObservableList<File> fileListViewValues = FXCollections.observableArrayList();
         fileListLView.setItems(fileListViewValues);
         fileButtonHashMap = new HashMap<>();
@@ -335,7 +335,7 @@ public class DeleterChunk extends AbstractGUIChunk {
                     return daemonThr;
                 });
 
-                for (File file : fileList) {
+                for (File file : duplicateFiles) {
                     if (isCancelled()) {
                         return null;
                     }
@@ -357,6 +357,7 @@ public class DeleterChunk extends AbstractGUIChunk {
                             Platform.runLater(() -> fileListViewValues.add(file));
 
                             Button previewButton = new Button(file.getName(), imageView);
+                            previewButton.setMnemonicParsing(false);
                             previewButton.setMaxSize(width, height);
                             previewButton.setContentDisplay(ContentDisplay.TOP);
                             previewButton.setOnAction(event1 -> {
@@ -405,7 +406,7 @@ public class DeleterChunk extends AbstractGUIChunk {
             }
 
             private void increaseProgress() {
-                updateProgress(progress.incrementAndGet(), fileList.size());
+                updateProgress(progress.incrementAndGet(), duplicateFiles.size());
             }
         };
 
@@ -422,7 +423,7 @@ public class DeleterChunk extends AbstractGUIChunk {
             } catch (Exception e) {
                 chunkManager.showException(e);
             }
-            for (File file : fileList) {
+            for (File file : duplicateFiles) {
                 if (chunkManager.isFileChosen(file)) {
                     Platform.runLater(() -> selectFileAndDisableButton(file));
                 }

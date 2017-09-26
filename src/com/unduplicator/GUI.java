@@ -184,6 +184,7 @@ public class GUI extends Application {
                 }
             });
             Thread taskThread = new Thread(() -> {
+/*
                 try {
                     task.run();
                     processedFilesHM = task.get();
@@ -191,6 +192,7 @@ public class GUI extends Application {
                 } catch (InterruptedException | ExecutionException e) {
                     showException(e);
                 }
+*/
             });
             taskThread.setDaemon(true);
             taskThread.start();

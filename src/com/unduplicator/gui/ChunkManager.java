@@ -79,7 +79,7 @@ public class ChunkManager {
     }
 
     //Results object
-    protected void setResults(HashMap<String, List<File>> processedFilesHM) {
+    protected void setResults(HashMap<String, Set<File>> processedFilesHM) {
         results = new Results(this, processedFilesHM);
     }
     protected void saveResults(File file) {
@@ -108,8 +108,8 @@ public class ChunkManager {
         if (results == null) return 0;
         return results.countDuplicates();
     }
-    protected List<File> getListOfDuplicatesCopy(String checksumKey) {
-        return results.getFilesListCopy(checksumKey);
+    protected Set<File> getDuplicateFilesCopy(String checksumKey) {
+        return results.getDuplicateFilesCopy(checksumKey);
     }
     protected Set<String> getDuplicatesChecksumSet() {
         return results.getDuplicateChecksumSet();

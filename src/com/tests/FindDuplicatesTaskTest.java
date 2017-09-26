@@ -1,7 +1,6 @@
 package com.tests;
 
 import com.unduplicator.FindDuplicatesTask;
-import javafx.application.Platform;
 import javafx.embed.swing.JFXPanel;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -10,7 +9,6 @@ import org.junit.Test;
 import java.io.File;
 import java.util.*;
 import java.util.concurrent.CancellationException;
-import java.util.concurrent.ExecutionException;
 
 import static org.junit.Assert.*;
 import static com.tests.TestMatEnum.*;
@@ -37,19 +35,19 @@ public class FindDuplicatesTaskTest {
 
     @Test
     public void call() throws Exception {
-        HashMap<String, List<File>> result;
+        HashMap<String, Set<File>> result;
         task = new FindDuplicatesTask(dirList, algorithm);
 
         //Prepare control hashmap
-        HashMap<String, List<File>> control = new HashMap<>();
-        ArrayList<File> alTmp = new ArrayList<>();
+        HashMap<String, Set<File>> control = new HashMap<>();
+        HashSet<File> alTmp = new HashSet<>();
         alTmp.add(ROOT_CONTROL.getFile());
         alTmp.add(INNER_COPY_GOOD.getFile());
         alTmp.add(INNER2_COPY_GOOD.getFile());
         alTmp.add(INNER2_INNER_COPY_GOOD.getFile());
         control.put(ROOT_CONTROL.getSha256CheckSum(), alTmp);
 
-        alTmp = new ArrayList<>();
+        alTmp = new HashSet<>();
         alTmp.add(ROOT_COPY_BAD.getFile());
         alTmp.add(INNER2_COPY_BAD.getFile());
         alTmp.add(INNER2_INNER_COPY_BAD.getFile());
@@ -57,9 +55,6 @@ public class FindDuplicatesTaskTest {
 
         task.run();
         result = task.get();
-
-        control.forEach((s, files) -> Collections.sort(files));
-        result.forEach((s, files) -> Collections.sort(files));
 
         assertEquals(control, result);
     }

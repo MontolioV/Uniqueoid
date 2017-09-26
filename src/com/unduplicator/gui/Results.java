@@ -14,13 +14,13 @@ public class Results {
     private ResourcesProvider resProvider = ResourcesProvider.getInstance();
     private ChunkManager chunkManager;
 
-    private Map<String, List<File>> processedFilesMap;
+    private Map<String, Set<File>> processedFilesMap;
     private Set<String> duplicateChSumSet;
     private Set<File> filesToDelete = new HashSet<>();
     private Map<File, String> filesThatRemains = new HashMap<>();
     private Set<String> duplicateChoiceMade = new HashSet<>();
 
-    public Results(ChunkManager chunkManager, Map<String, List<File>> processedFilesMap) {
+    public Results(ChunkManager chunkManager, Map<String, Set<File>> processedFilesMap) {
         this.processedFilesMap = processedFilesMap;
         this.chunkManager = chunkManager;
         makeDuplicateSet();
@@ -29,7 +29,7 @@ public class Results {
     public Results(ChunkManager chunkManager, File serializationFile) {
         this.chunkManager = chunkManager;
         try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(serializationFile))) {
-            processedFilesMap = (Map<String, List<File>>) ois.readObject();
+            processedFilesMap = (Map<String, Set<File>>) ois.readObject();
         } catch (Exception e) {
             chunkManager.showException(e);
         }
@@ -38,7 +38,7 @@ public class Results {
 
     protected int countDuplicates() {
         int result = 0;
-        for (Map.Entry<String, List<File>> entry : processedFilesMap.entrySet()) {
+        for (Map.Entry<String, Set<File>> entry : processedFilesMap.entrySet()) {
             if (entry.getValue().size() > 1) {
                 result += entry.getValue().size() - 1;
             }
@@ -48,13 +48,13 @@ public class Results {
 
     protected void removeMissingFiles() {
         processedFilesMap.forEach((s, files) ->{
-            ArrayList<File> updatedList = new ArrayList<>();
+            HashSet<File> updatedSet = new HashSet<>();
             for (File file : files) {
                 if (file.exists()) {
-                    updatedList.add(file);
+                    updatedSet.add(file);
                 }
             }
-            processedFilesMap.replace(s, updatedList);
+            processedFilesMap.replace(s, updatedSet);
         });
         makeDuplicateSet();
         chunkManager.updateDeleterChunk();
@@ -65,14 +65,14 @@ public class Results {
         processedFilesMap.entrySet().stream().filter(entry -> entry.getValue().size() > 1).forEach(entry -> duplicateChSumSet.add(entry.getKey()));
     }
 
-    protected List<File> getFilesListCopy(String checksumKey) {
+    protected Set<File> getDuplicateFilesCopy(String checksumKey) {
         for (File file : processedFilesMap.get(checksumKey)) {
             if (!file.exists()) {
                 removeMissingFiles();
                 break;
             }
         }
-        return new ArrayList<>(processedFilesMap.get(checksumKey));
+        return new HashSet<>(processedFilesMap.get(checksumKey));
     }
 
     protected Set<String> getDuplicateChecksumSet() {
@@ -88,7 +88,7 @@ public class Results {
     }
 
     protected void chooseOneAmongDuplicates(String checksum, File fileThatRemains) {
-        List<File> duplList = processedFilesMap.get(checksum);
+        Set<File> duplList = processedFilesMap.get(checksum);
         for (File file : duplList) {
             if (!file.exists()) {
                 removeMissingFiles();
@@ -125,7 +125,7 @@ public class Results {
         int delCounter = 0;
 
         for (String checksum : duplicateChSumSet) {
-            List<File> duplicates = processedFilesMap.get(checksum);
+            Set<File> duplicates = processedFilesMap.get(checksum);
             for (File duplicate : duplicates) {
                 if (chooseCondition.test(duplicate, patternToFind)) {
                     chooseOneAmongDuplicates(checksum, duplicate);
@@ -142,7 +142,7 @@ public class Results {
     protected void unselectByChecksum(String checksum) {
         if (checksum == null || checksum.equals("")) return;
 
-        List<File> files = processedFilesMap.get(checksum);
+        Set<File> files = processedFilesMap.get(checksum);
         if (files != null) {
             files.forEach(file -> {
                 filesToDelete.remove(file);
