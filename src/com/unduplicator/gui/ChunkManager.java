@@ -34,8 +34,7 @@ public class ChunkManager {
         runtimeChunk = new RuntimeStatusChunk(this);
         setupChunk = new SetupChunk(GUI.getPrimaryStage());
 
-        setupChunk.setStartButtonHandler(runtimeChunk.getStartButHandler(
-                                         setupChunk.getStartTask()));
+        setupChunk.setStartButtonHandler(runtimeChunk.getTaskButtonHandler(() -> setupChunk.getStartTask()));
 
         chunks.add(menuBarChunk);
         chunks.add(runtimeChunk);
@@ -46,8 +45,7 @@ public class ChunkManager {
         deleterChunk.updateChunk();
         chunks.add(deleterChunk);
 
-        setupChunk.setAddToResultsButtonHandler(runtimeChunk.getStartButHandler(
-                                                results.addToPreviousResultTask()));
+        setupChunk.setAddToResultsButtonHandler(runtimeChunk.getTaskButtonHandler(() -> results.addToPreviousResultTask()));
     }
 
     //Show in GUI

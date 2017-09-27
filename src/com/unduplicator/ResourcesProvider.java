@@ -26,7 +26,7 @@ public class ResourcesProvider {
 
     private void makeSupportedLocalesSet() {
         Set<Locale> result = new HashSet<>();
-        result.add(new Locale("en", "EN"));
+        result.add(new Locale("en", "US"));
         result.add(new Locale("ru", "RU"));
         result.add(new Locale("uk", "UA"));
 
@@ -40,7 +40,7 @@ public class ResourcesProvider {
             return (Locale) ois.readObject();
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
-            return new Locale("en", "EN");
+            return new Locale("en", "US");
         }
     }
 

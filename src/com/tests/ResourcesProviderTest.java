@@ -25,7 +25,7 @@ public class ResourcesProviderTest {
 
     @Test
     public void setBundlesLocale() throws Exception {
-        ResourcesProvider.getInstance().setBundlesLocale(new Locale("en", "EN"));
+        ResourcesProvider.getInstance().setBundlesLocale(new Locale("en", "US"));
         String defaultMessage = ResourcesProvider.getInstance().getStrFromBundle("messages", "taskProcessing");
         assertEquals("Processing...", defaultMessage);
         ResourcesProvider.getInstance().setBundlesLocale(new Locale("ru", "RU"));
@@ -61,7 +61,7 @@ public class ResourcesProviderTest {
                             rp.setBundlesLocale(new Locale("ru", "RU"));
                             localeIsChanged.set(false);
                         } else {
-                            rp.setBundlesLocale(new Locale("en", "EN"));
+                            rp.setBundlesLocale(new Locale("en", "US"));
                             localeIsChanged.set(true);
                         }
                         semaphore.release();

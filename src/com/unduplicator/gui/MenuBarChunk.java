@@ -45,6 +45,7 @@ public class MenuBarChunk extends AbstractGUIChunk {
 
     private Menu helpMenu = new Menu();
     private MenuItem licenseMI = new MenuItem();
+    private MenuItem getStartedMI = new MenuItem();
 
     public MenuBarChunk(ChunkManager chunkManager, Stage mainStage) {
         this.chunkManager = chunkManager;
@@ -81,6 +82,7 @@ public class MenuBarChunk extends AbstractGUIChunk {
 
         helpMenu.setText(resProvider.getStrFromGUIBundle("helpMenu"));
         licenseMI.setText(resProvider.getStrFromGUIBundle("licenseMI"));
+        getStartedMI.setText(resProvider.getStrFromGUIBundle("getStartedMI"));
     }
 
     @Override
@@ -219,8 +221,17 @@ public class MenuBarChunk extends AbstractGUIChunk {
                 chunkManager.showException(e);
             }
         });
+        getStartedMI.setOnAction(event -> {
+            TextArea ta = new TextArea(resProvider.getStrFromMessagesBundle("getStarted"));
+            ta.setEditable(false);
+            ta.setWrapText(true);
+            ta.setPrefHeight(400);
+            chunkManager.showInNewStage(ta);
+        });
 
-        helpMenu.getItems().addAll(licenseMI);
+        helpMenu.getItems().addAll(
+                getStartedMI,
+                licenseMI);
         return helpMenu;
     }
 

@@ -41,7 +41,7 @@ public class Results {
         int result = 0;
         for (Map.Entry<String, Set<File>> entry : processedFilesMap.entrySet()) {
             if (entry.getValue().size() > 1) {
-                result += entry.getValue().size() - 1;
+                result += entry.getValue().size();
             }
         }
         return result;

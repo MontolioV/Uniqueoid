@@ -174,6 +174,8 @@ public class DeleterChunk extends AbstractGUIChunk {
 
         chooserByParentButton.setMaxWidth(Double.MAX_VALUE);
         chooserByRootButton.setMaxWidth(Double.MAX_VALUE);
+        chooserByParentButton.setPrefWidth(100000);
+        chooserByRootButton.setPrefWidth(100000);
         HBox.setHgrow(chooserByParentButton, Priority.ALWAYS);
         HBox.setHgrow(chooserByRootButton, Priority.ALWAYS);
         HBox buttonsBox = new HBox(5, chooserByParentButton, chooserByRootButton);

@@ -20,6 +20,7 @@ import java.io.File;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import java.util.function.Supplier;
 
 /**
  * <p>Created by MontolioV on 30.08.17.
@@ -123,9 +124,9 @@ public class RuntimeStatusChunk extends AbstractGUIChunk {
         return runtimePane;
     }
 
-    public EventHandler<ActionEvent> getStartButHandler(Task<Map<String, Set<File>>> task) {
+    public EventHandler<ActionEvent> getTaskButtonHandler(Supplier<Task<Map<String, Set<File>>>> taskSupplier) {
         EventHandler<ActionEvent> startButHandler = event -> {
-            this.task = task;
+            this.task = taskSupplier.get();
 
             long startTime = System.currentTimeMillis();
             messagesTA.clear();
