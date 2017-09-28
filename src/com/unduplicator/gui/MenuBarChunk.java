@@ -3,6 +3,8 @@ package com.unduplicator.gui;
 import com.unduplicator.ResourcesProvider;
 import javafx.application.Platform;
 import javafx.scene.control.*;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
@@ -10,11 +12,14 @@ import javafx.stage.FileChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Stage;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 import java.io.*;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.StringJoiner;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
@@ -46,6 +51,7 @@ public class MenuBarChunk extends AbstractGUIChunk {
     private Menu helpMenu = new Menu();
     private MenuItem licenseMI = new MenuItem();
     private MenuItem getStartedMI = new MenuItem();
+    private MenuItem aboutMI = new MenuItem();
 
     public MenuBarChunk(ChunkManager chunkManager, Stage mainStage) {
         this.chunkManager = chunkManager;
@@ -228,10 +234,61 @@ public class MenuBarChunk extends AbstractGUIChunk {
             ta.setPrefHeight(450);
             chunkManager.showInNewStage(ta);
         });
+        aboutMI.setOnAction(event -> {
+            int width = 1000;
+            int height = 100;
+            int r, g, b;
+            double rPeak = 0;
+            double gPeak = width / 2;
+            double bPeak = width;
+            BufferedImage rainbowBuffer = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+            ImageView rainbowImageView = null;
+
+            for (int x = 0; x < width; x++) {
+                for (int y = 0; y < height; y++) {
+                    int fX = x, fY = y;
+                    Function<Double, Double> scales = peak -> {
+                        double scalesX = 1 - (Math.abs(fX - peak) / width);
+                        double scalesY = 1 - ((double) fY / height);
+                        return scalesX * scalesY;
+                    };
+
+                    r = (int) (255 * scales.apply(rPeak));
+                    g = (int) (255 * scales.apply(gPeak));
+                    b = (int) (255 * scales.apply(bPeak));
+
+                    int pixel = (255 << 24) | (r << 16) | (g << 8) | b;
+                    rainbowBuffer.setRGB(x, y, pixel);
+                }
+            }
+
+            try (PipedInputStream pis = new PipedInputStream();
+                 BufferedInputStream bis = new BufferedInputStream(pis);
+                 PipedOutputStream pos = new PipedOutputStream(pis);
+                 BufferedOutputStream bos = new BufferedOutputStream(pos))
+            {
+                Thread writeThrd = new Thread(() -> {
+                    try {
+                        ImageIO.write(rainbowBuffer, "jpg", bos);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                });
+                writeThrd.start();
+                Image rainbowImage = new Image(bis);
+                rainbowImageView = new ImageView(rainbowImage);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            Label rainbowLabel = new Label("",rainbowImageView);
+            chunkManager.showInNewStage(rainbowLabel);
+        });
 
         helpMenu.getItems().addAll(
                 getStartedMI,
-                licenseMI);
+                licenseMI,
+                aboutMI);
         return helpMenu;
     }
 
