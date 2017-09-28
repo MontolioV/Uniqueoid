@@ -225,7 +225,7 @@ public class MenuBarChunk extends AbstractGUIChunk {
             TextArea ta = new TextArea(resProvider.getStrFromMessagesBundle("getStarted"));
             ta.setEditable(false);
             ta.setWrapText(true);
-            ta.setPrefHeight(400);
+            ta.setPrefHeight(450);
             chunkManager.showInNewStage(ta);
         });
 
