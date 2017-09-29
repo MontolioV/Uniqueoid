@@ -18,7 +18,7 @@ public class ChunkManager {
     private SetupChunk setupChunk;
     private RuntimeStatusChunk runtimeChunk;
     private DeleterChunk deleterChunk;
-
+    private AboutChunk aboutChunk;
 
     public ChunkManager(GUI gui) {
         GUI = gui;
@@ -46,6 +46,10 @@ public class ChunkManager {
         chunks.add(deleterChunk);
 
         setupChunk.setAddToResultsButtonHandler(runtimeChunk.getTaskButtonHandler(() -> results.addToPreviousResultTask()));
+    }
+    protected void makeAboutChunk() {
+        aboutChunk = new AboutChunk(this);
+        chunks.add(aboutChunk);
     }
 
     //Show in GUI
@@ -150,6 +154,10 @@ public class ChunkManager {
     protected void cleanOldResults() {
         results = null;
         deleterChunk = null;
+    }
+    protected void terminateAboutChunk() {
+        aboutChunk.shutDownAnimation();
+        aboutChunk = null;
     }
 
     //Setup chunk features
