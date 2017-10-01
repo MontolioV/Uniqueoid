@@ -14,7 +14,7 @@ import java.awt.image.BufferedImage;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 /**
@@ -30,8 +30,8 @@ public class AboutChunk extends AbstractGUIChunk {
     private ConcurrentLinkedQueue<Image> imgQueue = new ConcurrentLinkedQueue<>();
     private ImageView rainbowImageView = new ImageView();
 
-    private final int WIDTH = 500;
-    private final int HEIGHT = 200;
+    private final int WIDTH = 700;
+    private final int HEIGHT = 500;
     private final int UPPER_BOUND = WIDTH / 100;
     private final int LOWER_BOUND = WIDTH / -100;
     private final int BOTTOM = 0 + UPPER_BOUND;
@@ -41,6 +41,9 @@ public class AboutChunk extends AbstractGUIChunk {
     private double gPeak = MIDDLE;
     private double bPeak = WIDTH - UPPER_BOUND;
     private double darkness = 1;
+    private double compensatorDivider = 10000;
+    private double amplitude = UPPER_BOUND - LOWER_BOUND / 4;
+    private Function<Double, Double> compensatorFunction = makeDefaultCompensatorFunction();
 
     public AboutChunk(ChunkManager chunkManager) {
         this.chunkManager = chunkManager;
@@ -73,9 +76,11 @@ public class AboutChunk extends AbstractGUIChunk {
     }
 
     private void showItself() {
-        Scene aboutScene = new Scene((Parent) getAsNode(), WIDTH, 600);
+        Scene aboutScene = new Scene((Parent) getAsNode(), WIDTH, HEIGHT);
         Stage aboutStage = new Stage();
         aboutStage.setScene(aboutScene);
+        aboutStage.setResizable(false);
+        aboutStage.sizeToScene();
         aboutStage.setOnCloseRequest(event -> chunkManager.terminateAboutChunk());
 
         aboutStage.show();
@@ -192,7 +197,6 @@ public class AboutChunk extends AbstractGUIChunk {
         double rCompensator = 0;
         double gCompensator = 0;
         double bCompensator = 0;
-        double compensatorDivider = 10000;
 
         while (running) {
             try {
@@ -201,9 +205,9 @@ public class AboutChunk extends AbstractGUIChunk {
                 e.printStackTrace();
             }
 
-            rCompensator += (BOTTOM - rPeak) / compensatorDivider;
-            gCompensator += (MIDDLE - gPeak) / compensatorDivider;
-            bCompensator += (TOP - bPeak) / compensatorDivider;
+            rCompensator += compensatorFunction.apply(rPeak);
+            gCompensator += compensatorFunction.apply(gPeak);
+            bCompensator += compensatorFunction.apply(bPeak);
 
             rPeak += randomRange() + rCompensator;
             gPeak += randomRange() + gCompensator;
@@ -212,6 +216,31 @@ public class AboutChunk extends AbstractGUIChunk {
     }
 
     private double randomRange() {
-        return (LOWER_BOUND + (Math.random() * (UPPER_BOUND - LOWER_BOUND))) / 3;
+        return (LOWER_BOUND + (Math.random() * (UPPER_BOUND - LOWER_BOUND))) / 8;
     }
+
+    private Function<Double,Double> makeDefaultCompensatorFunction () {
+        BiFunction<Double, Double, Double> relativeFactorFunction = (mainPeak, otherPeak) -> {
+            double difference = Math.max(mainPeak, otherPeak) - Math.min(mainPeak, otherPeak);
+            double modifiedDifference = amplitude - difference;
+            return mainPeak > otherPeak ? modifiedDifference : -modifiedDifference;
+        };
+        Function<Double, Double> boundFactorFunction = mainPeak -> (MIDDLE - mainPeak) / 10;
+
+        Function<Double,Double> defaultCompensatorFunction = peak -> {
+            double closestPeak = 0;
+            if (peak == rPeak) {
+                closestPeak = Math.min(Math.abs(rPeak - gPeak), Math.abs(rPeak - bPeak));
+            } else if (peak == gPeak) {
+                closestPeak = Math.min(Math.abs(gPeak - rPeak), Math.abs(gPeak - bPeak));
+            } else if (peak == bPeak) {
+                closestPeak = Math.min(Math.abs(bPeak - rPeak), Math.abs(bPeak - gPeak));
+            }
+            double compensation = relativeFactorFunction.apply(peak, closestPeak) + boundFactorFunction.apply(peak);
+            return compensation / compensatorDivider;
+        };
+
+        return defaultCompensatorFunction;
+    }
+
 }
