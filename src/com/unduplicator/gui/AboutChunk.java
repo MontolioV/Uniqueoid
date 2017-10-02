@@ -25,24 +25,23 @@ public class AboutChunk extends AbstractGUIChunk {
     private ChunkManager chunkManager;
 
     private ArrayList<Thread> threads = new ArrayList<>();
+    private Thread interactionThread = null;
     private boolean running = true;
 
     private ConcurrentLinkedQueue<Image> imgQueue = new ConcurrentLinkedQueue<>();
     private ImageView rainbowImageView = new ImageView();
 
-    private final int WIDTH = 700;
-    private final int HEIGHT = 500;
-    private final int UPPER_BOUND = WIDTH / 100;
-    private final int LOWER_BOUND = WIDTH / -100;
-    private final int BOTTOM = 0 + UPPER_BOUND;
+    private final int WIDTH = 500;
+    private final int HEIGHT = 300;
     private final int MIDDLE = WIDTH / 2;
-    private final int TOP = WIDTH - UPPER_BOUND;
-    private double rPeak = UPPER_BOUND;
+    private final int RANDOM_LOWER_BOUND = -WIDTH;
+    private final int RANDOM_UPPER_BOUND = WIDTH;
+    private double rPeak = 0;
     private double gPeak = MIDDLE;
-    private double bPeak = WIDTH - UPPER_BOUND;
+    private double bPeak = WIDTH;
     private double darkness = 1;
-    private double compensatorDivider = 10000;
-    private double amplitude = UPPER_BOUND - LOWER_BOUND / 4;
+    private double compensatorStep = 100;
+    private double amplitude = WIDTH / 3;
     private Function<Double, Double> compensatorFunction = makeDefaultCompensatorFunction();
 
     public AboutChunk(ChunkManager chunkManager) {
@@ -56,10 +55,6 @@ public class AboutChunk extends AbstractGUIChunk {
      */
     @Override
     public void updateLocaleContent() {
-
-    }
-
-    public void attractLights(int x, int y) {
 
     }
 
@@ -77,6 +72,7 @@ public class AboutChunk extends AbstractGUIChunk {
 
     private void showItself() {
         Scene aboutScene = new Scene((Parent) getAsNode(), WIDTH, HEIGHT);
+        aboutScene.setOnMouseClicked(event -> attractLights(event.getSceneX(), event.getSceneY()));
         Stage aboutStage = new Stage();
         aboutStage.setScene(aboutScene);
         aboutStage.setResizable(false);
@@ -115,6 +111,7 @@ public class AboutChunk extends AbstractGUIChunk {
 
     private void makeImgGeneratorThread(OutputStream outputStream) {
         Thread imgGeneratorThread = new Thread(() -> {
+            final int HALF_WIDTH = WIDTH / 2;
             while (running) {
                 int r, g, b;
                 BufferedImage rainbowBuffer = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB);
@@ -125,7 +122,7 @@ public class AboutChunk extends AbstractGUIChunk {
                         double fY = y * darkness;
 
                         Function<Double, Double> scales = peak -> {
-                            double scalesX = 1 - (Math.abs(fX - peak) / (WIDTH / 2));
+                            double scalesX = 1 - (Math.abs(fX - peak) / (HALF_WIDTH));
                             double scalesY = 1 - (fY / HEIGHT);
                             if (scalesX < 0) scalesX = 0;
                             if (scalesY < 0) scalesY = 0;
@@ -205,9 +202,9 @@ public class AboutChunk extends AbstractGUIChunk {
                 e.printStackTrace();
             }
 
-            rCompensator += compensatorFunction.apply(rPeak);
-            gCompensator += compensatorFunction.apply(gPeak);
-            bCompensator += compensatorFunction.apply(bPeak);
+            rCompensator = compensatorFunction.apply(rPeak);
+            gCompensator = compensatorFunction.apply(gPeak);
+            bCompensator = compensatorFunction.apply(bPeak);
 
             rPeak += randomRange() + rCompensator;
             gPeak += randomRange() + gCompensator;
@@ -216,31 +213,57 @@ public class AboutChunk extends AbstractGUIChunk {
     }
 
     private double randomRange() {
-        return (LOWER_BOUND + (Math.random() * (UPPER_BOUND - LOWER_BOUND))) / 8;
+        return (RANDOM_LOWER_BOUND + (Math.random() * (RANDOM_UPPER_BOUND - RANDOM_LOWER_BOUND))) / 1000;
     }
 
     private Function<Double,Double> makeDefaultCompensatorFunction () {
         BiFunction<Double, Double, Double> relativeFactorFunction = (mainPeak, otherPeak) -> {
             double difference = Math.max(mainPeak, otherPeak) - Math.min(mainPeak, otherPeak);
-            double modifiedDifference = amplitude - difference;
-            return mainPeak > otherPeak ? modifiedDifference : -modifiedDifference;
+            double modifiedDifference = (difference - amplitude) / 2;
+            return mainPeak > otherPeak ? -modifiedDifference : modifiedDifference;
         };
         Function<Double, Double> boundFactorFunction = mainPeak -> (MIDDLE - mainPeak) / 10;
 
         Function<Double,Double> defaultCompensatorFunction = peak -> {
             double closestPeak = 0;
             if (peak == rPeak) {
-                closestPeak = Math.min(Math.abs(rPeak - gPeak), Math.abs(rPeak - bPeak));
+                closestPeak = Math.abs(rPeak - gPeak) < Math.abs(rPeak - bPeak) ? gPeak : rPeak;
             } else if (peak == gPeak) {
-                closestPeak = Math.min(Math.abs(gPeak - rPeak), Math.abs(gPeak - bPeak));
+                closestPeak = Math.abs(gPeak - rPeak) < Math.abs(gPeak - bPeak) ? rPeak : bPeak;
             } else if (peak == bPeak) {
-                closestPeak = Math.min(Math.abs(bPeak - rPeak), Math.abs(bPeak - gPeak));
+                closestPeak = Math.abs(bPeak - rPeak) < Math.abs(bPeak - gPeak) ? rPeak : gPeak;
             }
             double compensation = relativeFactorFunction.apply(peak, closestPeak) + boundFactorFunction.apply(peak);
-            return compensation / compensatorDivider;
+            return compensation / compensatorStep;
         };
 
         return defaultCompensatorFunction;
     }
 
+    private void attractLights(double x, double y) {
+        if (interactionThread != null) {
+            interactionThread.interrupt();
+            try {
+                interactionThread.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            threads.remove(interactionThread);
+        }
+
+        interactionThread = new Thread(() -> {
+            Function<Double, Double> oldFunction = compensatorFunction;
+            compensatorFunction = peak -> (x - peak) / compensatorStep;
+            try {
+                Thread.sleep(5000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            compensatorFunction = oldFunction;
+        });
+
+        interactionThread.setDaemon(true);
+        threads.add(interactionThread);
+        interactionThread.start();
+    }
 }
