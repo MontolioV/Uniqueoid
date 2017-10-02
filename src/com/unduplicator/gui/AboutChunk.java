@@ -40,7 +40,7 @@ public class AboutChunk extends AbstractGUIChunk {
     private double gPeak = MIDDLE;
     private double bPeak = WIDTH;
     private double darkness = 1;
-    private double compensatorStep = 100;
+    private double compensatorStep = 200;
     private double amplitude = WIDTH / 3;
     private Function<Double, Double> compensatorFunction = makeDefaultCompensatorFunction();
 
@@ -197,7 +197,7 @@ public class AboutChunk extends AbstractGUIChunk {
 
         while (running) {
             try {
-                Thread.sleep(10);
+                Thread.sleep(5);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -213,7 +213,7 @@ public class AboutChunk extends AbstractGUIChunk {
     }
 
     private double randomRange() {
-        return (RANDOM_LOWER_BOUND + (Math.random() * (RANDOM_UPPER_BOUND - RANDOM_LOWER_BOUND))) / 1000;
+        return (RANDOM_LOWER_BOUND + (Math.random() * (RANDOM_UPPER_BOUND - RANDOM_LOWER_BOUND))) / (WIDTH * 3);
     }
 
     private Function<Double,Double> makeDefaultCompensatorFunction () {
@@ -227,7 +227,7 @@ public class AboutChunk extends AbstractGUIChunk {
         Function<Double,Double> defaultCompensatorFunction = peak -> {
             double closestPeak = 0;
             if (peak == rPeak) {
-                closestPeak = Math.abs(rPeak - gPeak) < Math.abs(rPeak - bPeak) ? gPeak : rPeak;
+                closestPeak = Math.abs(rPeak - gPeak) < Math.abs(rPeak - bPeak) ? gPeak : bPeak;
             } else if (peak == gPeak) {
                 closestPeak = Math.abs(gPeak - rPeak) < Math.abs(gPeak - bPeak) ? rPeak : bPeak;
             } else if (peak == bPeak) {
