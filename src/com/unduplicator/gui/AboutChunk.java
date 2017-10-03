@@ -1,17 +1,22 @@
 package com.unduplicator.gui;
 
 import com.unduplicator.ResourcesProvider;
+import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
+import javafx.scene.effect.Effect;
+import javafx.scene.effect.GaussianBlur;
+import javafx.scene.effect.Glow;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.image.PixelWriter;
+import javafx.scene.image.WritableImage;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
-import java.io.*;
 import java.util.ArrayList;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.BiFunction;
@@ -40,9 +45,12 @@ public class AboutChunk extends AbstractGUIChunk {
     private double gPeak = MIDDLE;
     private double bPeak = WIDTH;
     private double darkness = 1;
-    private double compensatorStep = 200;
+    private int compensatorStep = 500;
+    private int msSleepPerStep = 1000 / compensatorStep;
     private double amplitude = WIDTH / 3;
     private Function<Double, Double> compensatorFunction = makeDefaultCompensatorFunction();
+    private long frames;
+    private long starttime;
 
     public AboutChunk(ChunkManager chunkManager) {
         this.chunkManager = chunkManager;
@@ -84,42 +92,50 @@ public class AboutChunk extends AbstractGUIChunk {
 
     private Node makeNode() {
         makeThreadHandler();
-        return new Label("", rainbowImageView);
+
+        Effect blur = new GaussianBlur(WIDTH / 100);
+        rainbowImageView.setEffect(blur);
+        Node background = new Label("", rainbowImageView);
+        Node overlay = makeOverlayNode();
+
+        return new StackPane(background, overlay);
+    }
+
+    private Node makeOverlayNode() {
+        GridPane result = new GridPane();
+
+        Label label = new Label("Some text!");
+        result.add(label, 0, 0);
+
+        result.setPadding(new Insets(20));
+        return result;
     }
 
     private void makeThreadHandler() {
         Thread thread = new Thread(() -> {
-            try (PipedInputStream pis = new PipedInputStream();
-                 BufferedInputStream bis = new BufferedInputStream(pis);
-                 PipedOutputStream pos = new PipedOutputStream(pis);
-                 BufferedOutputStream bos = new BufferedOutputStream(pos))
-            {
-                makeImgGeneratorThread(bos);
-                makeImgCollectorThread(bis);
-                makeImgShowThread();
+            makeImgGeneratorThread();
+            makeImgShowThread();
 
-                changeImageOverTime();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            changeImageOverTime();
         });
 
         threads.add(thread);
         thread.setDaemon(true);
         thread.start();
     }
-
-    private void makeImgGeneratorThread(OutputStream outputStream) {
+    private void makeImgGeneratorThread() {
         Thread imgGeneratorThread = new Thread(() -> {
             final int HALF_WIDTH = WIDTH / 2;
-            while (running) {
-                int r, g, b;
-                BufferedImage rainbowBuffer = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB);
+            int r, g, b;
 
-                for (int x = 0; x < WIDTH; x++) {
-                    for (int y = 0; y < HEIGHT; y++) {
+            while (running) {
+                WritableImage rainbowImage = new WritableImage(WIDTH, HEIGHT);
+                PixelWriter pixelWriter = rainbowImage.getPixelWriter();
+
+                for (int y = 0; y < HEIGHT; y++) {
+                    double fY = y * darkness;
+                    for (int x = 0; x < WIDTH; x++) {
                         double fX = x;
-                        double fY = y * darkness;
 
                         Function<Double, Double> scales = peak -> {
                             double scalesX = 1 - (Math.abs(fX - peak) / (HALF_WIDTH));
@@ -134,48 +150,27 @@ public class AboutChunk extends AbstractGUIChunk {
                         b = (int) (255 * scales.apply(bPeak));
 
                         int pixel = (255 << 24) | (r << 16) | (g << 8) | b;
-                        rainbowBuffer.setRGB(x, y, pixel);
+                        pixelWriter.setArgb(x, y, pixel);
                     }
                 }
 
-                try {
-                    ImageIO.write(rainbowBuffer, "jpg", outputStream);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                imgQueue.add(rainbowImage);
+                frames++;
             }
+            chunkManager.showException(new Exception(String.valueOf((frames / ((System.currentTimeMillis() - starttime) / 1000)))));
         });
+
+        starttime = System.currentTimeMillis();
 
         threads.add(imgGeneratorThread);
         imgGeneratorThread.setDaemon(true);
         imgGeneratorThread.start();
     }
-
-    private void makeImgCollectorThread(InputStream inputStream) {
-        Thread imgCollectorThread = new Thread(() -> {
-            while (running) {
-                if (imgQueue.size() > 100) {
-                    try {
-                        Thread.sleep(500);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
-
-                imgQueue.add(new Image(inputStream));
-            }
-        });
-
-        threads.add(imgCollectorThread);
-        imgCollectorThread.setDaemon(true);
-        imgCollectorThread.start();
-    }
-
     private void makeImgShowThread() {
         Thread imgShowThread = new Thread(() -> {
             while (running) {
                 try {
-                    Thread.sleep(10);
+                    Thread.sleep(10 / (imgQueue.size() + 1));
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -197,7 +192,7 @@ public class AboutChunk extends AbstractGUIChunk {
 
         while (running) {
             try {
-                Thread.sleep(5);
+                Thread.sleep(msSleepPerStep);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -211,11 +206,9 @@ public class AboutChunk extends AbstractGUIChunk {
             bPeak += randomRange() + bCompensator;
         }
     }
-
     private double randomRange() {
-        return (RANDOM_LOWER_BOUND + (Math.random() * (RANDOM_UPPER_BOUND - RANDOM_LOWER_BOUND))) / (WIDTH * 3);
+        return (RANDOM_LOWER_BOUND + (Math.random() * (RANDOM_UPPER_BOUND - RANDOM_LOWER_BOUND))) / (WIDTH * 4);
     }
-
     private Function<Double,Double> makeDefaultCompensatorFunction () {
         BiFunction<Double, Double, Double> relativeFactorFunction = (mainPeak, otherPeak) -> {
             double difference = Math.max(mainPeak, otherPeak) - Math.min(mainPeak, otherPeak);
@@ -239,7 +232,6 @@ public class AboutChunk extends AbstractGUIChunk {
 
         return defaultCompensatorFunction;
     }
-
     private void attractLights(double x, double y) {
         if (interactionThread != null) {
             interactionThread.interrupt();
