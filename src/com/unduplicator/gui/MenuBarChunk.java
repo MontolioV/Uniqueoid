@@ -92,16 +92,19 @@ public class MenuBarChunk extends AbstractGUIChunk {
         if (super.changeState(newState)) {
             switch (newState) {
                 case NO_RESULTS:
+                    setupPanelMI.setDisable(false);
                     saveMI.setDisable(true);
                     deletionPanelMI.setDisable(true);
                     deletionEditMenu.setDisable(true);
                     break;
                 case RUNNING:
+                    setupPanelMI.setDisable(true);
                     saveMI.setDisable(true);
                     deletionPanelMI.setDisable(true);
                     deletionEditMenu.setDisable(true);
                     break;
                 case HAS_RESULTS:
+                    setupPanelMI.setDisable(false);
                     saveMI.setDisable(false);
                     deletionPanelMI.setDisable(false);
                     deletionEditMenu.setDisable(false);

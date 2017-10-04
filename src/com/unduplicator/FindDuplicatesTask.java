@@ -104,6 +104,7 @@ public class FindDuplicatesTask extends Task<Map<String, Set<File>>> {
     }
 
     private void controlAndOutputResult() throws InterruptedException {
+        StringJoiner sb = new StringJoiner("\n");
         while (fjThread.isAlive() || !queueProcessed.isEmpty() || !queueExMessages.isEmpty()) {
             //Cancellation
             if (isCancelled()) {
@@ -113,7 +114,7 @@ public class FindDuplicatesTask extends Task<Map<String, Set<File>>> {
 
             if (queueProcessed.isEmpty() && queueExMessages.isEmpty()) {
                 try {
-                    Thread.sleep(100);
+                    Thread.sleep(10);
                 } catch (InterruptedException ex) {
                     //No problem
                 }
@@ -137,8 +138,11 @@ public class FindDuplicatesTask extends Task<Map<String, Set<File>>> {
             }
 
             if (!queueExMessages.isEmpty()) {
-                updateMessage(queueExMessages.poll());
+                sb.add(queueExMessages.poll());
                 filesCounter++;
+            } else if (sb.length() > 0) {
+                updateMessage(sb.toString());
+                sb = new StringJoiner("\n");
             }
 
             updateTitle(fjPool.toString());
