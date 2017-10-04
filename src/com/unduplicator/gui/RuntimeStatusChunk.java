@@ -65,16 +65,19 @@ public class RuntimeStatusChunk extends AbstractGUIChunk {
             switch (newState) {
 
                 case NO_RESULTS:
+                    toSetupBut.setDisable(false);
                     toResultBut.setDisable(true);
                     stopButton.setDisable(true);
                     progressBar.setVisible(false);
                     break;
                 case RUNNING:
+                    toSetupBut.setDisable(true);
                     toResultBut.setDisable(true);
                     stopButton.setDisable(false);
                     progressBar.setVisible(true);
                     break;
                 case HAS_RESULTS:
+                    toSetupBut.setDisable(false);
                     toResultBut.setDisable(false);
                     stopButton.setDisable(true);
                     progressBar.setVisible(false);

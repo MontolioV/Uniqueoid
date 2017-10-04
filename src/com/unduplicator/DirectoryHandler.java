@@ -16,7 +16,9 @@ public class DirectoryHandler extends RecursiveAction {
     private final ConcurrentLinkedQueue<String> QUEUE_EX_MESSAGES;
     private final String HASH_ALGORITHM;
     private ResourcesProvider resProvider = ResourcesProvider.getInstance();
-    private ArrayList<DirectoryHandler> tasks = new ArrayList<>();
+    private ArrayList<ForkJoinTask<Void>> tasks = new ArrayList<>();
+    private final long LARGE_FILE_SIZE = (long) (100 * Math.pow(2, 20));
+    private File largeFile;
 
     public DirectoryHandler(File file,
                             String hashAlgorithm,
@@ -56,7 +58,19 @@ public class DirectoryHandler extends RecursiveAction {
                     exceptionToQueue(e);
                 }
             } else if (file.isFile()) {
-                processFile(file);
+                if (file.length() < LARGE_FILE_SIZE) {
+                    processFile(file);
+                } else {
+                    if (largeFile == null) {
+                        largeFile = file;
+                    } else {
+                        DirectoryHandler task = new DirectoryHandler(file,
+                                HASH_ALGORITHM,
+                                QUEUE_FILE_AND_CHECKSUM,
+                                QUEUE_EX_MESSAGES);
+                        tasks.add(task.fork());
+                    }
+                }
             } else if (file.isDirectory()) {
                 if (file.listFiles() == null) {
                     QUEUE_EX_MESSAGES.offer(
@@ -67,8 +81,7 @@ public class DirectoryHandler extends RecursiveAction {
                             HASH_ALGORITHM,
                             QUEUE_FILE_AND_CHECKSUM,
                             QUEUE_EX_MESSAGES);
-                    task.fork();
-                    tasks.add(task);
+                    tasks.add(task.fork());
                 }
             } else {
                 QUEUE_EX_MESSAGES.offer(
@@ -77,6 +90,10 @@ public class DirectoryHandler extends RecursiveAction {
             }
         }
 
+        if (largeFile != null) {
+            QUEUE_EX_MESSAGES.offer("big -> " + largeFile);
+            processFile(largeFile);
+        }
         tasks.forEach(ForkJoinTask::join);
     }
 
@@ -118,8 +135,7 @@ public class DirectoryHandler extends RecursiveAction {
                     HASH_ALGORITHM,
                     QUEUE_FILE_AND_CHECKSUM,
                     QUEUE_EX_MESSAGES);
-            task.fork();
-            tasks.add(task);
+            tasks.add(task.fork());
         }
         return Arrays.copyOfRange(FILES_TO_HANDLE, THRESHOLD * tasksNumber, FILES_TO_HANDLE.length);
     }
