@@ -12,16 +12,19 @@ import java.util.concurrent.*;
  * <p>Created by MontolioV on 12.06.17.
  */
 public class FindDuplicatesTask extends Task<Map<String, Set<File>>> {
+    private ResourcesProvider resProvider = ResourcesProvider.getInstance();
+
     private final List<File> DIRECTORIES;
     private final String HASH_ALGORITHM;
     private Map<String, Set<File>> mapToReturn = new HashMap<>();
-    private int filesCounter = 0;
-    private int filesTotal = 0;
     private ConcurrentLinkedQueue<FileAndChecksum> queueProcessed = new ConcurrentLinkedQueue<>();
     private ConcurrentLinkedQueue<String> queueExMessages = new ConcurrentLinkedQueue<>();
     private ForkJoinPool fjPool = new ForkJoinPool();
     private Thread fjThread;
-    private ResourcesProvider resProvider = ResourcesProvider.getInstance();
+    private int filesCounter = 0;
+    private int filesTotal = 0;
+    private long byteCounter = 0;
+    private long byteTotal = 0;
 
     public FindDuplicatesTask(List<File> directories, String hash_algorithm) {
         super();
@@ -74,6 +77,7 @@ public class FindDuplicatesTask extends Task<Map<String, Set<File>>> {
                         result += countFiles(file);
                     } else {
                         result++;
+                        byteTotal += file.length();
                     }
                 }
             }
@@ -135,6 +139,7 @@ public class FindDuplicatesTask extends Task<Map<String, Set<File>>> {
                 }
 
                 filesCounter++;
+                byteCounter += pair.getFile().length();
             }
 
             if (!queueExMessages.isEmpty()) {
@@ -146,7 +151,7 @@ public class FindDuplicatesTask extends Task<Map<String, Set<File>>> {
             }
 
             updateTitle(fjPool.toString());
-            updateProgress(filesCounter, filesTotal);
+            updateProgress(byteCounter, byteTotal);
         }
 
         //Just to be sure
