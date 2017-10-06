@@ -2,23 +2,28 @@ package com.unduplicator.gui;
 
 import com.unduplicator.ResourcesProvider;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
 import javafx.scene.effect.Effect;
 import javafx.scene.effect.GaussianBlur;
-import javafx.scene.effect.Glow;
-import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.image.PixelWriter;
 import javafx.scene.image.WritableImage;
-import javafx.scene.layout.GridPane;
-import javafx.scene.layout.StackPane;
+import javafx.scene.layout.*;
+import javafx.scene.text.Text;
 import javafx.stage.Stage;
 
+import java.awt.*;
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.ArrayList;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -33,8 +38,11 @@ public class AboutChunk extends AbstractGUIChunk {
     private Thread interactionThread = null;
     private boolean running = true;
 
-    private ConcurrentLinkedQueue<Image> imgQueue = new ConcurrentLinkedQueue<>();
     private ImageView rainbowImageView = new ImageView();
+    private Text fpsRepresentation = new Text();
+    private Hyperlink gitHubLink = new Hyperlink();
+    private Hyperlink mailToLink = new Hyperlink();
+    private Label nameYearLabel = new Label();
 
     private final int WIDTH = 500;
     private final int HEIGHT = 300;
@@ -49,12 +57,12 @@ public class AboutChunk extends AbstractGUIChunk {
     private int msSleepPerStep = 1000 / compensatorStep;
     private double amplitude = WIDTH / 3;
     private Function<Double, Double> compensatorFunction = makeDefaultCompensatorFunction();
-    private long frames;
-    private long starttime;
+    private int maxFPS = 120;
 
     public AboutChunk(ChunkManager chunkManager) {
         this.chunkManager = chunkManager;
         setSelfNode(makeNode());
+        updateLocaleContent();
         showItself();
     }
 
@@ -63,7 +71,9 @@ public class AboutChunk extends AbstractGUIChunk {
      */
     @Override
     public void updateLocaleContent() {
-
+        gitHubLink.setText(resProvider.getStrFromMessagesBundle("gitHubLink"));
+        mailToLink.setText(resProvider.getStrFromMessagesBundle("emailMe"));
+        nameYearLabel.setText(resProvider.getStrFromMessagesBundle("nameYear"));
     }
 
     public void shutDownAnimation() {
@@ -81,15 +91,16 @@ public class AboutChunk extends AbstractGUIChunk {
     private void showItself() {
         Scene aboutScene = new Scene((Parent) getAsNode(), WIDTH, HEIGHT);
         aboutScene.setOnMouseClicked(event -> attractLights(event.getSceneX(), event.getSceneY()));
+
         Stage aboutStage = new Stage();
         aboutStage.setScene(aboutScene);
         aboutStage.setResizable(false);
         aboutStage.sizeToScene();
         aboutStage.setOnCloseRequest(event -> chunkManager.terminateAboutChunk());
+        aboutStage.setAlwaysOnTop(true);
 
         aboutStage.show();
     }
-
     private Node makeNode() {
         makeThreadHandler();
 
@@ -100,21 +111,62 @@ public class AboutChunk extends AbstractGUIChunk {
 
         return new StackPane(background, overlay);
     }
-
     private Node makeOverlayNode() {
-        GridPane result = new GridPane();
+        BorderPane result = new BorderPane();
 
-        Label label = new Label("Some text!");
-        result.add(label, 0, 0);
+        Text title = new Text("Unduplicator");
+        title.setStyle("-fx-opacity: 0.7; -fx-font: 50px Monospace; -fx-fill: WHITE");
+
+        gitHubLink.setBorder(Border.EMPTY);
+        gitHubLink.setPadding(new Insets(0));
+        gitHubLink.setOnAction(event -> {
+            try {
+                URI gitHubURI = new URL("https://github.com/MontolioV/Unduplicator").toURI();
+                linkFromDesktop(gitHubURI);
+            } catch (URISyntaxException | MalformedURLException e) {
+                e.printStackTrace();
+            }
+        });
+
+        mailToLink.setBorder(Border.EMPTY);
+        mailToLink.setPadding(new Insets(0));
+        mailToLink.setOnAction(event -> {
+            try {
+                linkFromDesktop(new URI("mailto:mail@gmail.com"));
+            } catch (URISyntaxException e) {
+                e.printStackTrace();
+            }
+        });
+
+        HBox hBox = new HBox(30, gitHubLink, mailToLink);
+        VBox vBox = new VBox(10, hBox, nameYearLabel);
+        hBox.setAlignment(Pos.CENTER);
+        vBox.setAlignment(Pos.CENTER);
+
+        result.setCenter(title);
+        result.setBottom(vBox);
 
         result.setPadding(new Insets(20));
         return result;
+    }
+    private void linkFromDesktop(URI uri) {
+        Thread thread = new Thread(() -> {
+            Desktop desktop = Desktop.isDesktopSupported() ? Desktop.getDesktop() : null;
+            if (desktop != null) {
+                try {
+                    desktop.browse(uri);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+        thread.setDaemon(true);
+        thread.start();
     }
 
     private void makeThreadHandler() {
         Thread thread = new Thread(() -> {
             makeImgGeneratorThread();
-            makeImgShowThread();
 
             changeImageOverTime();
         });
@@ -127,8 +179,11 @@ public class AboutChunk extends AbstractGUIChunk {
         Thread imgGeneratorThread = new Thread(() -> {
             final int HALF_WIDTH = WIDTH / 2;
             int r, g, b;
+            int maxDelay = 1000 / maxFPS;
+            long msPerFrame = 1;
 
             while (running) {
+                long startTime = System.currentTimeMillis();
                 WritableImage rainbowImage = new WritableImage(WIDTH, HEIGHT);
                 PixelWriter pixelWriter = rainbowImage.getPixelWriter();
 
@@ -154,35 +209,24 @@ public class AboutChunk extends AbstractGUIChunk {
                     }
                 }
 
-                imgQueue.add(rainbowImage);
-                frames++;
-            }
-            chunkManager.showException(new Exception(String.valueOf((frames / ((System.currentTimeMillis() - starttime) / 1000)))));
-        });
+                rainbowImageView.setImage(rainbowImage);
+                fpsRepresentation.setText(String.valueOf(1000 / Math.max(maxDelay, msPerFrame)));
 
-        starttime = System.currentTimeMillis();
+                msPerFrame = System.currentTimeMillis() - startTime;
+                long delay = maxDelay - msPerFrame;
+                if (delay > 0) {
+                    try {
+                        Thread.sleep(delay);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
 
         threads.add(imgGeneratorThread);
         imgGeneratorThread.setDaemon(true);
         imgGeneratorThread.start();
-    }
-    private void makeImgShowThread() {
-        Thread imgShowThread = new Thread(() -> {
-            while (running) {
-                try {
-                    Thread.sleep(10 / (imgQueue.size() + 1));
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                if (!imgQueue.isEmpty()) {
-                    rainbowImageView.setImage(imgQueue.poll());
-                }
-            }
-        });
-
-        threads.add(imgShowThread);
-        imgShowThread.setDaemon(true);
-        imgShowThread.start();
     }
 
     private void changeImageOverTime() {
