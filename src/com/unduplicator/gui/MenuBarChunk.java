@@ -34,6 +34,9 @@ public class MenuBarChunk extends AbstractGUIChunk {
     private Menu deletionEditMenu = new Menu();
     private MenuItem unselectCurrentMI = new MenuItem();
     private MenuItem unselectAllMI = new MenuItem();
+    private Menu resultsEditMenu = new Menu();
+    private MenuItem removeFileFromResultMI = new MenuItem();
+    private MenuItem removeDirectoryFromResultMI = new MenuItem();
 
     private Menu panelsMenu = new Menu();
     private MenuItem setupPanelMI = new MenuItem();
@@ -69,6 +72,9 @@ public class MenuBarChunk extends AbstractGUIChunk {
         deletionEditMenu.setText(resProvider.getStrFromGUIBundle("deletionEditMenu"));
         unselectCurrentMI.setText(resProvider.getStrFromGUIBundle("unselectCurrentMI"));
         unselectAllMI.setText(resProvider.getStrFromGUIBundle("unselectAllMI"));
+        resultsEditMenu.setText(resProvider.getStrFromGUIBundle("resultsEditMenu"));
+        removeFileFromResultMI.setText(resProvider.getStrFromGUIBundle("removeFileFromResultMI"));
+        removeDirectoryFromResultMI.setText(resProvider.getStrFromGUIBundle("removeDirectoryFromResultMI"));
 
         panelsMenu.setText(resProvider.getStrFromGUIBundle("panelsMenu"));
         setupPanelMI.setText((resProvider.getStrFromGUIBundle("setupNode")));
@@ -95,19 +101,19 @@ public class MenuBarChunk extends AbstractGUIChunk {
                     setupPanelMI.setDisable(false);
                     saveMI.setDisable(true);
                     deletionPanelMI.setDisable(true);
-                    deletionEditMenu.setDisable(true);
+                    editMenu.setDisable(true);
                     break;
                 case RUNNING:
                     setupPanelMI.setDisable(true);
                     saveMI.setDisable(true);
                     deletionPanelMI.setDisable(true);
-                    deletionEditMenu.setDisable(true);
+                    editMenu.setDisable(true);
                     break;
                 case HAS_RESULTS:
                     setupPanelMI.setDisable(false);
                     saveMI.setDisable(false);
                     deletionPanelMI.setDisable(false);
-                    deletionEditMenu.setDisable(false);
+                    editMenu.setDisable(false);
                     break;
             }
             return true;
@@ -174,7 +180,13 @@ public class MenuBarChunk extends AbstractGUIChunk {
         unselectAllMI.setAccelerator(new KeyCodeCombination(KeyCode.A, KeyCombination.ALT_DOWN));
 
         deletionEditMenu.getItems().addAll(unselectCurrentMI, unselectAllMI);
-        editMenu.getItems().addAll(deletionEditMenu);
+
+        removeFileFromResultMI.setOnAction(event -> chunkManager.ignoreSelectedDuplicate());
+        removeDirectoryFromResultMI.setOnAction(event -> chunkManager.ignoreDuplicatesByParent());
+
+        resultsEditMenu.getItems().addAll(removeFileFromResultMI, removeDirectoryFromResultMI);
+
+        editMenu.getItems().addAll(deletionEditMenu, resultsEditMenu);
         return editMenu;
     }
 

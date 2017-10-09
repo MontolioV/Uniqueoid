@@ -26,7 +26,6 @@ public class Results {
         this.chunkManager = chunkManager;
         makeDuplicateSet();
     }
-
     public Results(ChunkManager chunkManager, File serializationFile) {
         this.chunkManager = chunkManager;
         try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(serializationFile))) {
@@ -35,6 +34,13 @@ public class Results {
             chunkManager.showException(e);
         }
         makeDuplicateSet();
+    }
+    protected void saveToFile(File file) {
+        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(file))) {
+            oos.writeObject(processedFilesMap);
+        } catch (IOException e) {
+            chunkManager.showException(e);
+        }
     }
 
     protected int countDuplicates() {
@@ -47,7 +53,7 @@ public class Results {
         return result;
     }
 
-    protected void removeMissingFiles() {
+    protected void update() {
         processedFilesMap.forEach((s, files) ->{
             HashSet<File> updatedSet = new HashSet<>();
             for (File file : files) {
@@ -60,7 +66,6 @@ public class Results {
         makeDuplicateSet();
         chunkManager.updateDeleterChunk();
     }
-
     private void makeDuplicateSet() {
         duplicateChSumSet = new HashSet<>();
         processedFilesMap.entrySet().stream().filter(entry -> entry.getValue().size() > 1).forEach(entry -> duplicateChSumSet.add(entry.getKey()));
@@ -69,30 +74,45 @@ public class Results {
     protected Set<File> getDuplicateFilesCopy(String checksumKey) {
         for (File file : processedFilesMap.get(checksumKey)) {
             if (!file.exists()) {
-                removeMissingFiles();
+                update();
                 break;
             }
         }
         return new HashSet<>(processedFilesMap.get(checksumKey));
     }
-
     protected Set<String> getDuplicateChecksumSet() {
         return duplicateChSumSet;
     }
-
-    protected void saveToFile(File file) {
-        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(file))) {
-            oos.writeObject(processedFilesMap);
-        } catch (IOException e) {
-            chunkManager.showException(e);
+    protected Set<File> getFilesThatRemains() {
+        Set<File> result = new HashSet<>();
+        Set<String> checksumsToUnselect = new HashSet<>();
+        for (Map.Entry<File, String> entry : filesThatRemains.entrySet()) {
+            if (entry.getKey().exists()) {
+                result.add(entry.getKey());
+            } else {
+                checksumsToUnselect.add(entry.getValue());
+            }
         }
+
+        checksumsToUnselect.forEach(this::unselectByChecksum);
+        if (checksumsToUnselect.size() > 0) update();
+        return result;
+    }
+    protected Set<File> getFilesToDelete() {
+        Set<File> updatedSet = new HashSet<>();
+        filesToDelete.stream().filter(File::exists).forEach(updatedSet::add);
+        if (updatedSet.size() != filesToDelete.size()) {
+            filesToDelete = new HashSet<>(updatedSet);
+            update();
+        }
+        return updatedSet;
     }
 
     protected void chooseOneAmongDuplicates(String checksum, File fileThatRemains) {
         Set<File> duplList = processedFilesMap.get(checksum);
         for (File file : duplList) {
             if (!file.exists()) {
-                removeMissingFiles();
+                update();
                 break;
             }
         }
@@ -110,17 +130,14 @@ public class Results {
         duplicateChoiceMade.add(checksum);
         chunkManager.updateChecksumRepresentation();
     }
-
     protected int[] massChooseByParent(String patternToFind) {
         BiPredicate<File, String> byParent = (file, parentToFind) -> file.getParent().equals(parentToFind);
         return massChoose(byParent, patternToFind);
     }
-
     protected int[] massChooseByRoot(String patternToFind) {
         BiPredicate<File, String> byRoot = (file, rootToFind) -> file.getParent().startsWith(rootToFind);
         return massChoose(byRoot, patternToFind);
     }
-
     private int[] massChoose(BiPredicate<File, String> chooseCondition, String patternToFind) {
         int saveCounter = 0;
         int delCounter = 0;
@@ -152,48 +169,50 @@ public class Results {
         }
         duplicateChoiceMade.remove(checksum);
     }
-
     protected void unselectAll() {
         filesToDelete = new HashSet<>();
         filesThatRemains = new HashMap<>();
         duplicateChoiceMade = new HashSet<>();
     }
 
-    protected Set<File> getFilesThatRemains() {
-        Set<File> result = new HashSet<>();
-        Set<String> checksumsToUnselect = new HashSet<>();
-        for (Map.Entry<File, String> entry : filesThatRemains.entrySet()) {
-            if (entry.getKey().exists()) {
-                result.add(entry.getKey());
-            } else {
-                checksumsToUnselect.add(entry.getValue());
-            }
-        }
-
-        checksumsToUnselect.forEach(this::unselectByChecksum);
-        if (checksumsToUnselect.size() > 0) removeMissingFiles();
-        return result;
-    }
-
-    protected Set<File> getFilesToDelete() {
-        Set<File> updatedSet = new HashSet<>();
-        filesToDelete.stream().filter(File::exists).forEach(updatedSet::add);
-        if (updatedSet.size() != filesToDelete.size()) {
-            filesToDelete = new HashSet<>(updatedSet);
-            removeMissingFiles();
-        }
-        return updatedSet;
-    }
-
     protected boolean isFileChosen(File file) {
         return filesThatRemains.containsKey(file);
     }
-
     protected boolean isChoiceMadeOnChecksum(String checksum) {
         return duplicateChoiceMade.contains(checksum);
     }
 
     protected Task<Map<String, Set<File>>> addToPreviousResultTask() {
         return chunkManager.getAddToResultsTask(processedFilesMap);
+    }
+    protected void ignoreDuplicate(String checksum, File duplicate) {
+        removeFromResults(checksum, duplicate);
+        update();
+    }
+    protected void ignoreDuplicatesFromDirectory(String directoryString) {
+        HashMap<File, String> filesWithChecksumsToIgnore = new HashMap<>();
+
+        for (Map.Entry<String, Set<File>> mainMapEntry : processedFilesMap.entrySet()) {
+            for (File duplicate : mainMapEntry.getValue()) {
+                if (duplicate.getParent().equals(directoryString)) {
+                    filesWithChecksumsToIgnore.put(duplicate, mainMapEntry.getKey());
+                }
+            }
+        }
+
+        if (filesWithChecksumsToIgnore.size() == 0) return;
+        for (Map.Entry<File, String> entry : filesWithChecksumsToIgnore.entrySet()) {
+            removeFromResults(entry.getValue(), entry.getKey());
+        }
+        update();
+    }
+    private void removeFromResults(String checksum, File file) {
+        if (file == null) return;
+
+        processedFilesMap.get(checksum).remove(file);
+        filesToDelete.remove(file);
+        if (filesThatRemains.containsKey(file)) {
+            unselectByChecksum(checksum);
+        }
     }
 }

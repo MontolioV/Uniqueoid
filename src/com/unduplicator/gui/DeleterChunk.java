@@ -280,11 +280,6 @@ public class DeleterChunk extends AbstractGUIChunk {
                 buttonsBox);
     }
 
-    private void fullModelRefresh() {
-        chunkManager.removeSelectionsAll();
-        chunkManager.updateResults();
-    }
-
     private void selectFileAndDisableButton(File selectedFile) {
         if (selectedFile == null) return;
         massChooserTF.setText(selectedFile.getParent());
@@ -299,12 +294,15 @@ public class DeleterChunk extends AbstractGUIChunk {
         String checksum = checksumListView.getSelectionModel().getSelectedItem().getText();
         chunkManager.chooseOneAmongDuplicates(checksum, selectedFile);
     }
-
     public void unselectCurrent() {
         String selectedChecksum = checksumListView.getSelectionModel().getSelectedItem().getText();
         chunkManager.removeSelectionsByChecksum(selectedChecksum);
     }
 
+    private void fullModelRefresh() {
+        chunkManager.removeSelectionsAll();
+        chunkManager.updateResults();
+    }
     private void updateDuplicatesRepresentation(String checksum) {
         if (checksum == null || checksum.equals("")) {
             previewPane.getChildren().clear();
@@ -437,7 +435,6 @@ public class DeleterChunk extends AbstractGUIChunk {
         thread.start();
 
     }
-
     private void updateChecksumListView() {
         checksumTextSet = new HashSet<>();
         ObservableList<Text> obsList = FXCollections.observableArrayList();
@@ -450,7 +447,6 @@ public class DeleterChunk extends AbstractGUIChunk {
         updateChecksumTextRepresentation();
         checksumListView.setItems(obsList);
     }
-
     protected void updateChecksumTextRepresentation() {
         for (Text text : checksumTextSet) {
             if (chunkManager.isChoiceMadeOnChecksum(text.getText())) {
@@ -459,5 +455,15 @@ public class DeleterChunk extends AbstractGUIChunk {
                 text.setStyle("-fx-font-weight: bolder");
             }
         }
+    }
+
+    protected void ignoreSelectedDuplicate() {
+        File selectedDuplicate = fileListLView.getSelectionModel().getSelectedItem();
+        String checksum = checksumListView.getSelectionModel().getSelectedItem().getText();
+
+        chunkManager.ignoreDuplicate(checksum, selectedDuplicate);
+    }
+    protected void ignoreDuplicatesByParent() {
+        chunkManager.ignoreDuplicatesFromDirectory(massChooserTF.getText());
     }
 }

@@ -84,7 +84,7 @@ public class ChunkManager {
         chunks.forEach(chunk -> chunk.changeState(newState));
     }
 
-    //Results object
+    //Results chunk features
     protected void setResults(Map<String, Set<File>> processedFilesMap) {
         results = new Results(this, processedFilesMap);
     }
@@ -108,7 +108,7 @@ public class ChunkManager {
      * Remove files that already don't exist.
      */
     protected void updateResults() {
-        results.removeMissingFiles();
+        results.update();
     }
     protected int getDuplicatesAmount() {
         if (results == null) return 0;
@@ -148,16 +148,11 @@ public class ChunkManager {
     protected boolean isChoiceMadeOnChecksum(String checksum) {
         return results.isChoiceMadeOnChecksum(checksum);
     }
-
-
-    //Memory saving
-    protected void cleanOldResults() {
-        results = null;
-        deleterChunk = null;
+    protected void ignoreDuplicate(String checksum, File duplicate) {
+        results.ignoreDuplicate(checksum, duplicate);
     }
-    protected void terminateAboutChunk() {
-        aboutChunk.shutDownAnimation();
-        aboutChunk = null;
+    protected void ignoreDuplicatesFromDirectory(String directoryString) {
+        results.ignoreDuplicatesFromDirectory(directoryString);
     }
 
     //Setup chunk features
@@ -177,5 +172,21 @@ public class ChunkManager {
     }
     protected void updateChecksumRepresentation() {
         deleterChunk.updateChecksumTextRepresentation();
+    }
+    protected void ignoreSelectedDuplicate() {
+        deleterChunk.ignoreSelectedDuplicate();
+    }
+    protected void ignoreDuplicatesByParent() {
+        deleterChunk.ignoreDuplicatesByParent();
+    }
+
+    //Memory saving
+    protected void cleanOldResults() {
+        results = null;
+        deleterChunk = null;
+    }
+    protected void terminateAboutChunk() {
+        aboutChunk.shutDownAnimation();
+        aboutChunk = null;
     }
 }
