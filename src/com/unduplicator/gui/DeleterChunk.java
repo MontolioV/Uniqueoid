@@ -357,7 +357,7 @@ public class DeleterChunk extends AbstractGUIChunk {
                                     Image image = new Image(bis, width, height, true, true);
                                     imageView.setImage(image);
                                 } catch (IOException e) {
-                                    chunkManager.showException(e);
+                                    e.printStackTrace();
                                 }
                             }
 
