@@ -19,13 +19,14 @@ import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.text.DecimalFormat;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
  * <p>Created by MontolioV on 30.08.17.
@@ -44,6 +45,7 @@ public class DeleterChunk extends AbstractGUIChunk {
     private TilePane previewPane;
     private GridPane centerGrid;
     private VBox bottomBox;
+    private VBox progressControlBox = new VBox(3);
 
     private Button toSetupButton = new Button();
     private Button toRuntimeButton = new Button();
@@ -56,8 +58,6 @@ public class DeleterChunk extends AbstractGUIChunk {
     private Label massChooserLabel = new Label();
 
     private TextField massChooserTF = new TextField();
-
-    private ProgressBar progressBar = new ProgressBar();
 
     public DeleterChunk(ChunkManager chunkManager) {
         this.chunkManager = chunkManager;
@@ -213,10 +213,6 @@ public class DeleterChunk extends AbstractGUIChunk {
         centerGrid.add(textPart, 0, 2, 2, 1);
     }
     private void makeBottomBox() {
-        progressBar.visibleProperty().bindBidirectional(progressBar.managedProperty());
-        progressBar.setManaged(false);
-        progressBar.setMaxWidth(Double.MAX_VALUE);
-
         toSetupButton.setOnAction(event -> chunkManager.showSetupNode());
         toRuntimeButton.setOnAction(event -> chunkManager.showRuntimeStatusNode());
         deleteButton.setOnAction(event -> {
@@ -234,6 +230,7 @@ public class DeleterChunk extends AbstractGUIChunk {
             alert.setTitle(resProvider.getStrFromGUIBundle("delConformAlertTitle"));
             alert.setHeaderText(resProvider.getStrFromGUIBundle("delConformAlertBodyPart1") +
                     filesToDelete.size() +
+                    " (" + freedSpace(filesToDelete) + ")" +
                     resProvider.getStrFromGUIBundle("delConformAlertBodyPart2"));
             alert.getDialogPane().setExpandableContent(colToTAFunction.apply(filesToDelete));
 
@@ -242,26 +239,31 @@ public class DeleterChunk extends AbstractGUIChunk {
             alert.showAndWait()
                     .filter(response -> response == ButtonType.OK)
                     .ifPresent(type -> {
-                        Alert reportAlert = new Alert(Alert.AlertType.INFORMATION);
-                        progressBar.progressProperty().bind(deletionTask.progressProperty());
-                        progressBar.setManaged(true);
-                        deletionTask.run();
-                        try {
-                            List<File> notDeletedList = deletionTask.get();
-                            if (!notDeletedList.isEmpty()) {
-                                reportAlert.setHeaderText(resProvider.getStrFromGUIBundle("reportAlertHeaderFail"));
-                                reportAlert.getDialogPane().setExpandableContent(
-                                        colToTAFunction.apply(notDeletedList));
-                            } else {
-                                reportAlert.setHeaderText(resProvider.getStrFromGUIBundle("reportAlertHeaderSuccess"));
-                            }
-                        } catch (InterruptedException | ExecutionException e) {
-                            chunkManager.showException(e);
-                        }
+                        Supplier<Void> showAlert = () -> {
+                            Platform.runLater(() -> {
+                                Alert reportAlert = new Alert(Alert.AlertType.INFORMATION);
 
-                        chunkManager.updateResults();
-                        progressBar.setManaged(false);
-                        reportAlert.showAndWait();
+                                try {
+                                    List<File> notDeletedList = deletionTask.get();
+                                    if (!notDeletedList.isEmpty()) {
+                                        reportAlert.setHeaderText(resProvider.getStrFromGUIBundle("reportAlertHeaderFail"));
+                                        reportAlert.getDialogPane().setExpandableContent(
+                                                colToTAFunction.apply(notDeletedList));
+                                    } else {
+                                        reportAlert.setHeaderText(resProvider.getStrFromGUIBundle("reportAlertHeaderSuccess"));
+                                    }
+                                } catch (InterruptedException | ExecutionException e) {
+                                    chunkManager.showException(e);
+                                }
+
+                                chunkManager.updateResults();
+                                chunkManager.resizeAlertManually(reportAlert);
+                                reportAlert.showAndWait();
+                            });
+                            return null;
+                        };
+
+                        runTaskSeparateThread(deletionTask, showAlert, resProvider.getStrFromGUIBundle("deletionProgressLabel"));
                     });
         });
 
@@ -276,7 +278,7 @@ public class DeleterChunk extends AbstractGUIChunk {
         buttonsBox.setAlignment(Pos.CENTER);
 
         bottomBox = new VBox(10,
-                progressBar,
+                progressControlBox,
                 buttonsBox);
     }
 
@@ -284,7 +286,7 @@ public class DeleterChunk extends AbstractGUIChunk {
         if (selectedFile == null) return;
         massChooserTF.setText(selectedFile.getParent());
         Button linkedButton = fileButtonHashMap.get(selectedFile);
-        if (linkedButton.isDisabled()) return;
+        if (linkedButton == null || linkedButton.isDisabled()) return;
 
         fileButtonHashMap.forEach((file, button) -> button.setDisable(false));
         linkedButton.setDisable(true);
@@ -310,10 +312,6 @@ public class DeleterChunk extends AbstractGUIChunk {
             return;
         }
 
-        if (showDuplicatesTask != null) {
-            showDuplicatesTask.cancel();
-        }
-
         double width = 200;
         double height = 200;
         Set<File> duplicateFiles = chunkManager.getDuplicateFilesCopy(checksum);
@@ -323,8 +321,7 @@ public class DeleterChunk extends AbstractGUIChunk {
         previewPane.getChildren().clear();
         ArrayList<Task<Void>> tasks = new ArrayList<>();
 
-        showDuplicatesTask = new Task<Void>() {
-            AtomicBoolean stop = new AtomicBoolean();
+        Task<Void> newTask = new Task<Void>() {
             AtomicInteger progress = new AtomicInteger();
 
             @Override
@@ -340,22 +337,14 @@ public class DeleterChunk extends AbstractGUIChunk {
                         return null;
                     }
 
-                    ImageView imageView = new ImageView();
-                    ProgressIndicator prIndicator = new ProgressIndicator();
-                    prIndicator.progressProperty().addListener((observable1, oldValue1, newValue1) -> {
-                        if (newValue1.doubleValue() >= 1) {
-                            prIndicator.setVisible(false);
-                        }
-                    });
-                    StackPane stackPane = new StackPane(prIndicator);
-
                     Task<Void> imgTask = new Task<Void>() {
                         final long MAX_IMG_SIZE = 52_500_000;
 
                         @Override
                         protected Void call() throws Exception {
-                            Platform.runLater(() -> fileListViewValues.add(file));
+                            if (isCancelled()) return null;
 
+                            ImageView imageView = new ImageView();
                             Button previewButton = new Button(file.getName(), imageView);
                             previewButton.setMnemonicParsing(false);
                             previewButton.setMaxSize(width, height);
@@ -363,36 +352,44 @@ public class DeleterChunk extends AbstractGUIChunk {
                             previewButton.setOnAction(event1 -> {
                                 selectFileAndDisableButton(file);
                             });
-                            if (file.length() < MAX_IMG_SIZE) {
+                            if (file.length() < MAX_IMG_SIZE && !isCancelled()) {
                                 try (BufferedInputStream bis = new BufferedInputStream(new FileInputStream(file))) {
                                     Image image = new Image(bis, width, height, true, true);
-                                    if (!isCancelled()) {
-                                        Platform.runLater(() -> {
-                                            prIndicator.progressProperty().bind(image.progressProperty());
-                                            stackPane.getChildren().add(previewButton);
-                                        });
-                                    } else {
-                                        image.cancel();
-                                    }
                                     imageView.setImage(image);
                                 } catch (IOException e) {
                                     chunkManager.showException(e);
                                 }
                             }
 
+                            if (isCancelled()) return null;
+
                             fileButtonHashMap.put(file, previewButton);
+                            Platform.runLater(() -> {
+                                fileListViewValues.add(file);
+                                previewPane.getChildren().add(previewButton);
+                            });
+
                             increaseProgress();
                             return null;
                         }
                     };
 
-                    pool.execute(imgTask);
                     tasks.add(imgTask);
-
-                    if (!isCancelled()) {
-                        Platform.runLater(() -> previewPane.getChildren().add(stackPane));
-                    }
+                    pool.execute(imgTask);
                 }
+
+                for (Task<Void> voidTask : tasks) {
+                    voidTask.get();
+                }
+
+                Platform.runLater(() -> {
+                    for (File file : duplicateFiles) {
+                        if (isCancelled()) break;
+                        if (chunkManager.isFileChosen(file)) {
+                            selectFileAndDisableButton(file);
+                        }
+                    }
+                });
 
                 return null;
             }
@@ -400,7 +397,6 @@ public class DeleterChunk extends AbstractGUIChunk {
             @Override
             public boolean cancel(boolean mayInterruptIfRunning) {
                 boolean result = super.cancel(mayInterruptIfRunning);
-                stop.set(true);
                 tasks.forEach(Task::cancel);
                 return result;
             }
@@ -410,29 +406,14 @@ public class DeleterChunk extends AbstractGUIChunk {
             }
         };
 
-        progressBar.setManaged(true);
-        progressBar.progressProperty().bind(showDuplicatesTask.progressProperty());
+        Supplier<Void> idle = () -> null;
 
-        Thread thread = new Thread(() -> {
-            try {
-                showDuplicatesTask.run();
-                showDuplicatesTask.get();
-                for (Task<Void> voidTask : tasks) {
-                    voidTask.get();
-                }
-            } catch (Exception e) {
-                chunkManager.showException(e);
-            }
-            for (File file : duplicateFiles) {
-                if (chunkManager.isFileChosen(file)) {
-                    Platform.runLater(() -> selectFileAndDisableButton(file));
-                }
-            }
+        synchronized (this) {
+            if (showDuplicatesTask != null) showDuplicatesTask.cancel();
+            showDuplicatesTask = newTask;
+        }
 
-            Platform.runLater(() -> progressBar.setManaged(false));
-        });
-        thread.setDaemon(true);
-        thread.start();
+        runTaskSeparateThread(showDuplicatesTask, idle, resProvider.getStrFromGUIBundle("previewProgressLabel"));
 
     }
     private void updateChecksumListView() {
@@ -465,5 +446,63 @@ public class DeleterChunk extends AbstractGUIChunk {
     }
     protected void ignoreDuplicatesByParent() {
         chunkManager.ignoreDuplicatesFromDirectory(massChooserTF.getText());
+    }
+
+    private String freedSpace(Set<File> filesToDelete) {
+        long bytes = filesToDelete.stream().mapToLong(File::length).sum();
+        DecimalFormat decimalFormat = new DecimalFormat("0.00");
+        if (bytes < Math.pow(2, 30)) {
+            return decimalFormat.format(bytes / Math.pow(2, 20)) + "MB";
+        } else {
+            return decimalFormat.format(bytes / Math.pow(2, 30)) + "GB";
+        }
+    }
+
+    private void runTaskSeparateThread(Task task, Supplier<Void> postProcessing, String name) {
+        Thread taskThread = new Thread(task);
+        Thread controlThread = new Thread(() -> {
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            if (!task.isDone()) {
+                HBox hBox = new HBox(3);
+
+                Platform.runLater(() -> {
+                    Button cancelButton = new Button(resProvider.getStrFromGUIBundle("cancelButton"));
+                    cancelButton.setOnAction(event -> task.cancel());
+
+                    ProgressBar progressBar = new ProgressBar();
+                    progressBar.setMaxWidth(Double.MAX_VALUE);
+                    progressBar.progressProperty().bind(task.progressProperty());
+                    progressBar.prefHeightProperty().bind(cancelButton.heightProperty());
+
+                    StackPane pbWithNamePane = new StackPane(progressBar, new Label(name));
+                    HBox.setHgrow(pbWithNamePane, Priority.ALWAYS);
+
+                    hBox.getChildren().addAll(pbWithNamePane, cancelButton);
+                    progressControlBox.getChildren().add(hBox);
+                });
+
+                try {
+                    task.get();
+                } catch (InterruptedException | ExecutionException e) {
+                    chunkManager.showException(e);
+                } finally {
+                    Platform.runLater(() -> {
+                        progressControlBox.getChildren().remove(hBox);
+                    });
+                    postProcessing.get();
+                }
+            } else {
+                postProcessing.get();
+            }
+        });
+        taskThread.setDaemon(true);
+        controlThread.setDaemon(true);
+        taskThread.start();
+        controlThread.start();
     }
 }

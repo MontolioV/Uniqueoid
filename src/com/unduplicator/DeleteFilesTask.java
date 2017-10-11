@@ -34,15 +34,17 @@ public class DeleteFilesTask extends Task<List<File>> {
     }
 
     private void deleteFiles() {
-        int counter = 0;
+        double counter = 0;
 
         for (File file : fileList) {
+            if (isCancelled()) return;
+
             if (file.isDirectory()) {
                 cleanDir(file);
             } else {
                 deleteFile(file);
             }
-            progress += 0.5 * (++counter / fileList.size());
+            progress = 0.5 * (++counter / fileList.size());
             updateProgress(progress, 1);
         }
     }
@@ -66,8 +68,10 @@ public class DeleteFilesTask extends Task<List<File>> {
     }
 
     private void markEmptyDirs() throws NoSuchFileException {
-        int counter = 0;
+        double counter = 0;
         for (File file : fileList) {
+            if (isCancelled()) return;
+
             if (file.getParentFile() == null) {
                 throw new NoSuchFileException(
                         resProvider.getStrFromExceptionBundle("hasNoParent") +
@@ -75,7 +79,7 @@ public class DeleteFilesTask extends Task<List<File>> {
             } else {
                 addEmptyDirToList(file.getParentFile());
             }
-            progress += 0.25 * (++counter / fileList.size());
+            progress = 0.25 * (++counter / fileList.size());
             updateProgress(progress, 1);
         }
     }
@@ -103,17 +107,21 @@ public class DeleteFilesTask extends Task<List<File>> {
     }
 
     private void deleteEmptyDirs() {
+        if (isCancelled()) return;
+
         //Sort dirs to avoid situation, when dir can't be deleted cause it contains another empty dir
         Comparator<File> pathDepthComp = Comparator.comparingInt(f -> f.toPath().toAbsolutePath().getNameCount());
         ArrayList<File> dirsToDeleteAL = new ArrayList<>(dirsToDelete);
         dirsToDeleteAL.sort(pathDepthComp.reversed());
 
-        int counter = 0;
+        double counter = 0;
         for (File file : dirsToDeleteAL) {
+            if (isCancelled()) return;
+
             if (file.exists() && !file.delete()) {
                 notDeletedFileList.add(file);
             }
-            progress += 0.25 * (++counter / dirsToDeleteAL.size());
+            progress = 0.25 * (++counter / dirsToDeleteAL.size());
             updateProgress(progress, 1);
         }
     }

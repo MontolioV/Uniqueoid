@@ -91,7 +91,8 @@ public class DirectoryHandler extends RecursiveAction {
         }
 
         if (largeFile != null) {
-            QUEUE_EX_MESSAGES.offer("big -> " + largeFile);
+            QUEUE_EX_MESSAGES.offer(resProvider.getStrFromMessagesBundle("bigFile") +
+                                    "\t" + largeFile);
             processFile(largeFile);
         }
         tasks.forEach(ForkJoinTask::join);
