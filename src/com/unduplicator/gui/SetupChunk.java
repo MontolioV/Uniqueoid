@@ -8,6 +8,7 @@ import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
@@ -18,6 +19,8 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 import java.io.File;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -95,7 +98,7 @@ public class SetupChunk extends AbstractGUIChunk {
         }
     }
 
-    private BorderPane makePane() {
+    private Node makePane() {
         //Display
         VBox innerBox = new VBox(headerLabel);
         innerBox.setAlignment(Pos.CENTER);
@@ -158,8 +161,6 @@ public class SetupChunk extends AbstractGUIChunk {
         startButton.setMaxWidth(Double.MAX_VALUE);
         startButton.setPrefHeight(40);
         //AddToResults button
-//        addToResultsButton.managedProperty().bind(addToResultsButton.disabledProperty().not());
-//        addToResultsButton.visibleProperty().bind(addToResultsButton.disabledProperty().not());
         addToResultsButton.setDisable(true);
         addToResultsButton.setMaxWidth(Double.MAX_VALUE);
         addToResultsButton.setPrefHeight(40);
@@ -183,7 +184,27 @@ public class SetupChunk extends AbstractGUIChunk {
         borderPane.setBottom(bottomGridPane);
         borderPane.setPadding(new Insets(20));
 
+        addPictureOnBackground(displayPanel);
         return borderPane;
+    }
+
+    private void addPictureOnBackground(Region region) {
+        String imgURI = "";
+        try {
+            URL picURL = getClass().getClassLoader().getResource("img/dudes.jpg");
+            if (picURL != null) {
+                imgURI = picURL.toURI().toString();
+            }
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+        }
+        if (imgURI.equals("")) {
+            imgURI = new File("img/dudes.jpg").toURI().toString();
+        }
+        region.setStyle("-fx-background-image: url(" + imgURI + "); " +
+                "-fx-background-position: RIGHT BOTTOM; " +
+                "-fx-background-repeat: NO-REPEAT; " +
+                "-fx-background-size: CONTAIN");
     }
 
     protected void setStartButtonHandler(EventHandler<ActionEvent> eventHandler) {
