@@ -174,16 +174,15 @@ public class MenuBarChunk extends AbstractGUIChunk {
 
     private Menu makeEditMenu() {
         unselectCurrentMI.setOnAction(event -> chunkManager.removeSelectionsCurrent());
-        unselectAllMI.setOnAction(event -> chunkManager.removeSelectionsAll());
-
         unselectCurrentMI.setAccelerator(new KeyCodeCombination(KeyCode.Z, KeyCombination.ALT_DOWN));
+        unselectAllMI.setOnAction(event -> chunkManager.removeSelectionsAll());
         unselectAllMI.setAccelerator(new KeyCodeCombination(KeyCode.A, KeyCombination.ALT_DOWN));
-
         deletionEditMenu.getItems().addAll(unselectCurrentMI, unselectAllMI);
 
         removeFileFromResultMI.setOnAction(event -> chunkManager.ignoreSelectedDuplicate());
+        removeFileFromResultMI.setAccelerator(new KeyCodeCombination(KeyCode.R, KeyCombination.ALT_DOWN));
         removeDirectoryFromResultMI.setOnAction(event -> chunkManager.ignoreDuplicatesByParent());
-
+        removeDirectoryFromResultMI.setAccelerator(new KeyCodeCombination(KeyCode.R, KeyCombination.ALT_DOWN, KeyCombination.CONTROL_DOWN));
         resultsEditMenu.getItems().addAll(removeFileFromResultMI, removeDirectoryFromResultMI);
 
         editMenu.getItems().addAll(deletionEditMenu, resultsEditMenu);

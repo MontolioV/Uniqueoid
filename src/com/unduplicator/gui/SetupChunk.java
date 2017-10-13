@@ -191,7 +191,7 @@ public class SetupChunk extends AbstractGUIChunk {
     private void addPictureOnBackground(Region region) {
         String imgURI = "";
         try {
-            URL picURL = getClass().getClassLoader().getResource("img/dudes.jpg");
+            URL picURL = getClass().getClassLoader().getResource("img/dudes.png");
             if (picURL != null) {
                 imgURI = picURL.toURI().toString();
             }
@@ -199,7 +199,7 @@ public class SetupChunk extends AbstractGUIChunk {
             e.printStackTrace();
         }
         if (imgURI.equals("")) {
-            imgURI = new File("img/dudes.jpg").toURI().toString();
+            imgURI = new File("img/dudes.png").toURI().toString();
         }
         region.setStyle("-fx-background-image: url(" + imgURI + "); " +
                 "-fx-background-position: RIGHT BOTTOM; " +
