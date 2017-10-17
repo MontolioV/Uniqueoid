@@ -55,8 +55,8 @@ public class DeleteFilesTaskTest {
         DeleteFilesTask delTask = new DeleteFilesTask(fileAL);
         assertEquals(-1, delTask.getProgress(), 0.001);
         delTask.run();
-        Platform.runLater(() -> assertEquals(1, delTask.getProgress(), 0.001));
         assertEquals(0, delTask.get().size());
+        Platform.runLater(() -> assertEquals(1, delTask.getProgress(), 0.001));
 
         assertFalse(mainDir.exists());
         assertTrue(rootDir.exists());

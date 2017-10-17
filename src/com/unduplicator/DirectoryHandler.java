@@ -48,12 +48,9 @@ public class DirectoryHandler extends RecursiveAction {
         for (File file : remainder) {
             if (Files.isSymbolicLink(file.toPath())) {
                 try {
-                    QUEUE_EX_MESSAGES.offer(
-                                    "\n"
-                                    + resProvider.getStrFromMessagesBundle("isLink")
+                    QUEUE_EX_MESSAGES.offer(resProvider.getStrFromMessagesBundle("isLink")
                                     + "\n" + resProvider.getStrFromMessagesBundle("link") + file.toString()
-                                    + "\n" + resProvider.getStrFromMessagesBundle("realPath") + file.toPath().toRealPath().toString()
-                                    + "\n");
+                                    + "\n" + resProvider.getStrFromMessagesBundle("realPath") + file.toPath().toRealPath().toString());
                 } catch (IOException e) {
                     exceptionToQueue(e);
                 }

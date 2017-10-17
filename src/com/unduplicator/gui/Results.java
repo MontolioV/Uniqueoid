@@ -6,6 +6,7 @@ import javafx.concurrent.Task;
 import java.io.*;
 import java.nio.file.NoSuchFileException;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiPredicate;
 
 /**
@@ -14,6 +15,8 @@ import java.util.function.BiPredicate;
 public class Results {
     private ResourcesProvider resProvider = ResourcesProvider.getInstance();
     private ChunkManager chunkManager;
+
+    private AtomicLong updateTimeStamp = new AtomicLong();
 
     private Map<String, Set<File>> processedFilesMap;
     private Set<String> duplicateChSumSet;
@@ -54,6 +57,10 @@ public class Results {
     }
 
     protected void update() {
+        if ((System.currentTimeMillis() - updateTimeStamp.get()) < 500) {
+            return;
+        }
+
         processedFilesMap.forEach((s, files) ->{
             HashSet<File> updatedSet = new HashSet<>();
             for (File file : files) {
@@ -65,6 +72,8 @@ public class Results {
         });
         makeDuplicateSet();
         chunkManager.updateDeleterChunk();
+
+        updateTimeStamp.set(System.currentTimeMillis());
     }
     private void makeDuplicateSet() {
         duplicateChSumSet = new HashSet<>();

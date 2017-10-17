@@ -136,6 +136,10 @@ public class RuntimeStatusChunk extends AbstractGUIChunk {
             progressBar.progressProperty().bind(task.progressProperty());
             poolStatusLabel.textProperty().bind(task.titleProperty());
             task.messageProperty().addListener((observable, oldValue, newValue) -> {
+                if (messagesTA.getParagraphs().size() > 100) {
+                    messagesTA.setText(resProvider.getStrFromMessagesBundle("seeLog")
+                                       + "\t" + System.getProperty("user.dir") + "/log.txt");
+                }
                 messagesTA.appendText("\n" + newValue);
             });
             task.stateProperty().addListener((observable, oldValue, newValue) -> {

@@ -25,6 +25,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -34,6 +35,8 @@ import java.util.function.Supplier;
 public class DeleterChunk extends AbstractGUIChunk {
     private ResourcesProvider resProvider = ResourcesProvider.getInstance();
     private ChunkManager chunkManager;
+
+    private AtomicLong previewTimeStamp = new AtomicLong();
 
     private Task<Void> showDuplicatesTask;
 
@@ -312,11 +315,13 @@ public class DeleterChunk extends AbstractGUIChunk {
             return;
         }
 
+        long ownTimeStamp = System.currentTimeMillis();
+        previewTimeStamp.set(ownTimeStamp);
+
         double width = 200;
         double height = 200;
         Set<File> duplicateFiles = chunkManager.getDuplicateFilesCopy(checksum);
         ObservableList<File> fileListViewValues = FXCollections.observableArrayList();
-        fileListLView.setItems(fileListViewValues);
         fileButtonHashMap = new HashMap<>();
         previewPane.getChildren().clear();
         ArrayList<Task<Void>> tasks = new ArrayList<>();
@@ -326,6 +331,9 @@ public class DeleterChunk extends AbstractGUIChunk {
 
             @Override
             protected Void call() throws Exception {
+                Thread.sleep(300);
+                if (isOutdated()) return null;
+
                 Executor pool = Executors.newFixedThreadPool(4, r -> {
                     Thread daemonThr = new Thread(r);
                     daemonThr.setDaemon(true);
@@ -404,6 +412,10 @@ public class DeleterChunk extends AbstractGUIChunk {
             private void increaseProgress() {
                 updateProgress(progress.incrementAndGet(), duplicateFiles.size());
             }
+
+            private boolean isOutdated() {
+                return previewTimeStamp.get() != ownTimeStamp;
+            }
         };
 
         Supplier<Void> idle = () -> null;
@@ -411,6 +423,7 @@ public class DeleterChunk extends AbstractGUIChunk {
         synchronized (this) {
             if (showDuplicatesTask != null) showDuplicatesTask.cancel();
             showDuplicatesTask = newTask;
+            fileListLView.setItems(fileListViewValues);
         }
 
         runTaskSeparateThread(showDuplicatesTask, idle, resProvider.getStrFromGUIBundle("previewProgressLabel"));

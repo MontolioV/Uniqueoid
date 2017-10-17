@@ -2,7 +2,11 @@ package com.unduplicator;
 
 import javafx.concurrent.Task;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -25,6 +29,7 @@ public class FindDuplicatesTask extends Task<Map<String, Set<File>>> {
     private int filesTotal = 0;
     private long byteCounter = 0;
     private long byteTotal = 0;
+    private BufferedWriter logBW;
 
     public FindDuplicatesTask(List<File> directories, String hash_algorithm) {
         super();
@@ -51,20 +56,31 @@ public class FindDuplicatesTask extends Task<Map<String, Set<File>>> {
      */
     @Override
     protected Map<String, Set<File>> call() throws Exception {
-        preparations();
-        runTasksInNewThread();
-        controlAndOutputResult();
+        try {
+            preparations();
+            runTasksInNewThread();
+            controlAndOutputResult();
+        } finally {
+            if (logBW != null) {
+                logBW.close();
+            }
+        }
         return mapToReturn;
     }
 
     private void preparations() {
+        try {
+            logBW = new BufferedWriter(new FileWriter(System.getProperty("user.dir") + "/log.txt"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         updateMessage(resProvider.getStrFromMessagesBundle("countFiles"));
         DIRECTORIES.forEach(dir -> filesTotal += countFiles(dir));
         updateMessage(resProvider.getStrFromMessagesBundle("totalFiles") + filesTotal);
     }
 
     public int countFiles(File dir) {
-        if (dir == null || isCancelled()) return 0;
+        if (dir == null || isCancelled() || Files.isSymbolicLink(dir.toPath())) return 0;
 
         if (dir.isDirectory()) {
             int result = 0;
@@ -144,7 +160,6 @@ public class FindDuplicatesTask extends Task<Map<String, Set<File>>> {
 
             if (!queueExMessages.isEmpty()) {
                 sb.add(queueExMessages.poll());
-                filesCounter++;
             } else if (sb.length() > 0) {
                 updateMessage(sb.toString());
                 sb = new StringJoiner("\n");
@@ -154,7 +169,27 @@ public class FindDuplicatesTask extends Task<Map<String, Set<File>>> {
             updateProgress(byteCounter, byteTotal);
         }
 
+        updateMessage(resProvider.getStrFromMessagesBundle("hashsumsCount") + filesCounter);
+
         //Just to be sure
         fjThread.join();
+    }
+
+    /**
+     * Writes message to log file as well.
+     *
+     * @param message the new message
+     */
+    @Override
+    protected void updateMessage(String message) {
+        super.updateMessage(message);
+        if (logBW != null) {
+            try {
+                logBW.write(message);
+                logBW.newLine();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 }

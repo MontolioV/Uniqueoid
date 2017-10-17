@@ -44,7 +44,7 @@ public class DeleteFilesTask extends Task<List<File>> {
             } else {
                 deleteFile(file);
             }
-            progress = 0.5 * (++counter / fileList.size());
+            progress += 0.5 * (++counter / fileList.size());
             updateProgress(progress, 1);
         }
     }
@@ -79,7 +79,7 @@ public class DeleteFilesTask extends Task<List<File>> {
             } else {
                 addEmptyDirToList(file.getParentFile());
             }
-            progress = 0.25 * (++counter / fileList.size());
+            progress += 0.25 * (++counter / fileList.size());
             updateProgress(progress, 1);
         }
     }
@@ -121,7 +121,7 @@ public class DeleteFilesTask extends Task<List<File>> {
             if (file.exists() && !file.delete()) {
                 notDeletedFileList.add(file);
             }
-            progress = 0.25 * (++counter / dirsToDeleteAL.size());
+            progress += 0.25 * (++counter / dirsToDeleteAL.size());
             updateProgress(progress, 1);
         }
     }
