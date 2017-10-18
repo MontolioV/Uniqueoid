@@ -460,6 +460,9 @@ public class DeleterChunk extends AbstractGUIChunk {
     protected void ignoreDuplicatesByParent() {
         chunkManager.ignoreDuplicatesFromDirectory(massChooserTF.getText());
     }
+    protected void ignoreDuplicatesByRoot() {
+        chunkManager.ignoreDuplicatesFromRoot(massChooserTF.getText());
+    }
 
     private String freedSpace(Set<File> filesToDelete) {
         long bytes = filesToDelete.stream().mapToLong(File::length).sum();

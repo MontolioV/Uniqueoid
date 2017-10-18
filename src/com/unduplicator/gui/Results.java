@@ -27,6 +27,9 @@ public class Results {
     private Map<File, String> filesThatRemains = new HashMap<>();
     private Set<String> duplicateChoiceMade = new HashSet<>();
 
+    private BiPredicate<File, String> byParentPredicate = (file, parentToFind) -> file.getParent().equals(parentToFind);
+    private BiPredicate<File, String> byRootPredicate = (file, rootToFind) -> file.getParent().startsWith(rootToFind);
+
     public Results(ChunkManager chunkManager, Map<String, Set<File>> processedFilesMap) {
         this.processedFilesMap = processedFilesMap;
         this.chunkManager = chunkManager;
@@ -143,12 +146,10 @@ public class Results {
         chunkManager.updateChecksumRepresentation();
     }
     protected int[] massChooseByParent(String patternToFind) {
-        BiPredicate<File, String> byParent = (file, parentToFind) -> file.getParent().equals(parentToFind);
-        return massChoose(byParent, patternToFind);
+        return massChoose(byParentPredicate, patternToFind);
     }
     protected int[] massChooseByRoot(String patternToFind) {
-        BiPredicate<File, String> byRoot = (file, rootToFind) -> file.getParent().startsWith(rootToFind);
-        return massChoose(byRoot, patternToFind);
+        return massChoose(byRootPredicate, patternToFind);
     }
     private int[] massChoose(BiPredicate<File, String> chooseCondition, String patternToFind) {
         int saveCounter = 0;
@@ -202,11 +203,17 @@ public class Results {
         update();
     }
     protected void ignoreDuplicatesFromDirectory(String directoryString) {
+        massIgnore(byParentPredicate, directoryString);
+    }
+    protected void ignoreDuplicatesFromRoot(String rootString) {
+        massIgnore(byRootPredicate, rootString);
+    }
+    private void massIgnore(BiPredicate<File, String> ignoreCondition, String patternToFind) {
         HashMap<File, String> filesWithChecksumsToIgnore = new HashMap<>();
 
         for (Map.Entry<String, Set<File>> mainMapEntry : processedFilesMap.entrySet()) {
             for (File duplicate : mainMapEntry.getValue()) {
-                if (duplicate.getParent().equals(directoryString)) {
+                if (ignoreCondition.test(duplicate, patternToFind)) {
                     filesWithChecksumsToIgnore.put(duplicate, mainMapEntry.getKey());
                 }
             }

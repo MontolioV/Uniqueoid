@@ -156,6 +156,9 @@ public class ChunkManager {
     protected void ignoreDuplicatesFromDirectory(String directoryString) {
         results.ignoreDuplicatesFromDirectory(directoryString);
     }
+    protected void ignoreDuplicatesFromRoot(String rootString) {
+        results.ignoreDuplicatesFromRoot(rootString);
+    }
 
     //Setup chunk features
     protected FindDuplicatesTask getAddToResultsTask(Map<String, Set<File>> previousResult) {
@@ -180,6 +183,9 @@ public class ChunkManager {
     }
     protected void ignoreDuplicatesByParent() {
         deleterChunk.ignoreDuplicatesByParent();
+    }
+    protected void ignoreDuplicatesByRoot() {
+        deleterChunk.ignoreDuplicatesByRoot();
     }
 
     //Memory saving

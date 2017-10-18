@@ -41,6 +41,7 @@ public class MenuBarChunk extends AbstractGUIChunk {
     private Menu resultsEditMenu = new Menu();
     private MenuItem removeFileFromResultMI = new MenuItem();
     private MenuItem removeDirectoryFromResultMI = new MenuItem();
+    private MenuItem removeRootFromResultMI = new MenuItem();
 
     private Menu panelsMenu = new Menu();
     private MenuItem setupPanelMI = new MenuItem();
@@ -79,6 +80,7 @@ public class MenuBarChunk extends AbstractGUIChunk {
         resultsEditMenu.setText(resProvider.getStrFromGUIBundle("resultsEditMenu"));
         removeFileFromResultMI.setText(resProvider.getStrFromGUIBundle("removeFileFromResultMI"));
         removeDirectoryFromResultMI.setText(resProvider.getStrFromGUIBundle("removeDirectoryFromResultMI"));
+        removeRootFromResultMI.setText(resProvider.getStrFromGUIBundle("removeRootFromResultMI"));
 
         panelsMenu.setText(resProvider.getStrFromGUIBundle("panelsMenu"));
         setupPanelMI.setText((resProvider.getStrFromGUIBundle("setupNode")));
@@ -188,7 +190,10 @@ public class MenuBarChunk extends AbstractGUIChunk {
         removeFileFromResultMI.setAccelerator(new KeyCodeCombination(KeyCode.R, KeyCombination.ALT_DOWN));
         removeDirectoryFromResultMI.setOnAction(event -> chunkManager.ignoreDuplicatesByParent());
         removeDirectoryFromResultMI.setAccelerator(new KeyCodeCombination(KeyCode.R, KeyCombination.ALT_DOWN, KeyCombination.CONTROL_DOWN));
-        resultsEditMenu.getItems().addAll(removeFileFromResultMI, removeDirectoryFromResultMI);
+        removeRootFromResultMI.setOnAction(event -> chunkManager.ignoreDuplicatesByRoot());
+        removeRootFromResultMI.setAccelerator(new KeyCodeCombination(KeyCode.R, KeyCombination.ALT_DOWN, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN));
+
+        resultsEditMenu.getItems().addAll(removeFileFromResultMI, removeDirectoryFromResultMI, removeRootFromResultMI);
 
         editMenu.getItems().addAll(deletionEditMenu, resultsEditMenu);
         return editMenu;
