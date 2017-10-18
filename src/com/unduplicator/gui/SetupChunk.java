@@ -1,6 +1,7 @@
 package com.unduplicator.gui;
 
 import com.unduplicator.FindDuplicatesTask;
+import com.unduplicator.GlobalFiles;
 import com.unduplicator.ResourcesProvider;
 import javafx.collections.FXCollections;
 import javafx.event.ActionEvent;
@@ -117,20 +118,24 @@ public class SetupChunk extends AbstractGUIChunk {
 
         addDirectoryButton.setOnAction(event -> {
             DirectoryChooser dirChooser = new DirectoryChooser();
+            dirChooser.setInitialDirectory(GlobalFiles.getInstance().getLastVisitedDir());
             File dir = dirChooser.showDialog(mainStage);
             if (dir != null) {
                 String tmp = showDirLabel.getText();
                 showDirLabel.setText(tmp + dir.toString() + "\n");
                 chosenFiles.add(dir);
+                GlobalFiles.getInstance().setLastVisitedDir(dir.getParentFile());
             }
         });
         addFileButton.setOnAction(event -> {
             FileChooser fileChooser = new FileChooser();
+            fileChooser.setInitialDirectory(GlobalFiles.getInstance().getLastVisitedDir());
             File file = fileChooser.showOpenDialog(mainStage);
             if (file != null) {
                 String tmp = showDirLabel.getText();
                 showDirLabel.setText(tmp + file.toString() + "\n");
                 chosenFiles.add(file);
+                GlobalFiles.getInstance().setLastVisitedDir(file.getParentFile());
             }
         });
         clearDirsButton.setOnAction(event -> {

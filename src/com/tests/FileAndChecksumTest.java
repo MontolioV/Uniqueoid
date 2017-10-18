@@ -5,7 +5,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 import static com.tests.TestMatEnum.*;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  * <p>Created by MontolioV on 06.06.17.

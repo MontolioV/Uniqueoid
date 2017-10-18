@@ -8,7 +8,9 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ForkJoinPool;
 
 /**
  * Provides task of finding duplicating files in given directories.
@@ -70,7 +72,7 @@ public class FindDuplicatesTask extends Task<Map<String, Set<File>>> {
 
     private void preparations() {
         try {
-            logBW = new BufferedWriter(new FileWriter(System.getProperty("user.dir") + "/log.txt"));
+            logBW = new BufferedWriter(new FileWriter(GlobalFiles.getInstance().getLogFile()));
         } catch (IOException e) {
             e.printStackTrace();
         }

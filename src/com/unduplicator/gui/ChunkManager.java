@@ -5,7 +5,9 @@ import javafx.scene.Parent;
 import javafx.scene.control.Alert;
 
 import java.io.File;
-import java.util.*;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * <p>Created by MontolioV on 30.08.17.

@@ -331,7 +331,7 @@ public class DeleterChunk extends AbstractGUIChunk {
 
             @Override
             protected Void call() throws Exception {
-                Thread.sleep(300);
+                Thread.sleep(200);
                 if (isOutdated()) return null;
 
                 Executor pool = Executors.newFixedThreadPool(4, r -> {

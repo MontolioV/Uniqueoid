@@ -1,6 +1,6 @@
 package com.unduplicator.gui;
 
-import com.unduplicator.FindDuplicatesTask;
+import com.unduplicator.GlobalFiles;
 import com.unduplicator.ResourcesProvider;
 import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
@@ -138,7 +138,7 @@ public class RuntimeStatusChunk extends AbstractGUIChunk {
             task.messageProperty().addListener((observable, oldValue, newValue) -> {
                 if (messagesTA.getParagraphs().size() > 100) {
                     messagesTA.setText(resProvider.getStrFromMessagesBundle("seeLog")
-                                       + "\t" + System.getProperty("user.dir") + "/log.txt");
+                                       + GlobalFiles.getInstance().getLogFile());
                 }
                 messagesTA.appendText("\n" + newValue);
             });

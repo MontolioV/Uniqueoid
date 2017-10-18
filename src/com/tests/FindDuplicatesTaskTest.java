@@ -10,8 +10,8 @@ import java.io.File;
 import java.util.*;
 import java.util.concurrent.CancellationException;
 
-import static org.junit.Assert.*;
 import static com.tests.TestMatEnum.*;
+import static org.junit.Assert.assertEquals;
 
 /**
  * <p>Created by MontolioV on 12.06.17.

@@ -1,5 +1,6 @@
 package com.unduplicator.gui;
 
+import com.unduplicator.GlobalFiles;
 import com.unduplicator.ResourcesProvider;
 import javafx.application.Platform;
 import javafx.scene.control.*;
@@ -10,7 +11,10 @@ import javafx.stage.FileChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Stage;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -142,6 +146,7 @@ public class MenuBarChunk extends AbstractGUIChunk {
             fileChooser.getExtensionFilters().add(filter);
             fileChooser.setSelectedExtensionFilter(filter);
             fileChooser.setInitialFileName("*.ser");
+            fileChooser.setInitialDirectory(GlobalFiles.getInstance().getAppDir());
             return fileChooser;
         };
 

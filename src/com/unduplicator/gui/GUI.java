@@ -1,5 +1,6 @@
 package com.unduplicator.gui;
 
+import com.unduplicator.GlobalFiles;
 import com.unduplicator.ResourcesProvider;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -54,16 +55,16 @@ public class GUI extends Application{
 
         double tmpWidth = 0;
         double tmpHeight = 0;
-        try (BufferedReader br = new BufferedReader(new FileReader(
-                System.getProperty("user.dir") + "/settings.txt"))) {
+        try (BufferedReader br = new BufferedReader(new FileReader(GlobalFiles.getInstance().getSettingsFile()))) {
             tmpHeight = Double.parseDouble(br.readLine().split("=")[1]);
             tmpWidth = Double.parseDouble(br.readLine().split("=")[1]);
             isFullScreen = Boolean.parseBoolean(br.readLine().split("=")[1]);
+            GlobalFiles.getInstance().setLastVisitedDir(br.readLine().split("=")[1]);
         } catch (Throwable throwable) {
             throwable.printStackTrace();
         }
-        if (tmpHeight > 400) height = tmpHeight;
-        if (tmpWidth > 400) width = tmpWidth;
+        if (tmpHeight > 100) height = tmpHeight;
+        if (tmpWidth > 100) width = tmpWidth;
     }
 
     /**
@@ -81,13 +82,14 @@ public class GUI extends Application{
     @Override
     public void stop() throws Exception {
         super.stop();
-        try (BufferedWriter bw = new BufferedWriter(new FileWriter(
-                System.getProperty("user.dir") + "/settings.txt"))) {
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(GlobalFiles.getInstance().getSettingsFile()))) {
             bw.write("height=" + String.valueOf(mainScene.getHeight()));
             bw.newLine();
             bw.write("width=" + String.valueOf(mainScene.getWidth()));
             bw.newLine();
             bw.write("fullscreen=" + String.valueOf(getPrimaryStage().isFullScreen()));
+            bw.newLine();
+            bw.write("lastVisitedDir=" + GlobalFiles.getInstance().getLastVisitedDir().toString());
             bw.newLine();
         } catch (IOException ex) {
             ex.printStackTrace();
