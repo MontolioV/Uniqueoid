@@ -53,7 +53,7 @@ public class GlobalFiles {
     }
 
     public void setLastVisitedDir(File lastVisitedDir) {
-        if (lastVisitedDir.exists()) {
+        if (lastVisitedDir != null && lastVisitedDir.exists()) {
             this.lastVisitedDir = lastVisitedDir;
         }
     }
