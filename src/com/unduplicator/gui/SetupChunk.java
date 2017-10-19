@@ -35,6 +35,8 @@ public class SetupChunk extends AbstractGUIChunk {
     private ResourcesProvider resProvider = ResourcesProvider.getInstance();
     private Stage mainStage;
 
+    private boolean canStart;
+
     private List<File> chosenFiles = new ArrayList<>();
     private String chosenAlgorithm = "SHA-256";
 
@@ -46,6 +48,7 @@ public class SetupChunk extends AbstractGUIChunk {
 
     private Label headerLabel = new Label();
     private Label algorithmLabel = new Label();
+    private Label showDirLabel = new Label("");
 
     public SetupChunk(Stage mainStage) {
         this.mainStage = mainStage;
@@ -69,41 +72,38 @@ public class SetupChunk extends AbstractGUIChunk {
 
     }
 
-    /**
-     * May change state depending on received state.
-     *
-     * @param newState
-     * @return <code>true</code> if new state differs, otherwise <code>false</code>
-     */
     @Override
     public boolean changeState(GuiStates newState) {
-        if (super.changeState(newState)) {
-            switch (newState) {
+        super.changeState(newState);
 
-                case NO_RESULTS:
-                    startButton.setDisable(false);
-                    addToResultsButton.setDisable(true);
-                    break;
-                case RUNNING:
-                    startButton.setDisable(true);
-                    addToResultsButton.setDisable(true);
-                    break;
-                case HAS_RESULTS:
-                    startButton.setDisable(false);
-                    addToResultsButton.setDisable(false);
-                    break;
-            }
-            return true;
-        } else {
-            return false;
+        switch (newState) {
+
+            case NO_RESULTS:
+                startButton.setDisable(false);
+                addToResultsButton.setDisable(true);
+                break;
+            case RUNNING:
+                startButton.setDisable(true);
+                addToResultsButton.setDisable(true);
+                break;
+            case HAS_RESULTS:
+                startButton.setDisable(false);
+                addToResultsButton.setDisable(false);
+                break;
         }
+
+        if (!canStart) {
+            startButton.setDisable(true);
+            addToResultsButton.setDisable(true);
+        }
+
+        return true;
     }
 
     private Node makePane() {
         //Display
         VBox innerBox = new VBox(headerLabel);
         innerBox.setAlignment(Pos.CENTER);
-        Label showDirLabel = new Label("");
         showDirLabel.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
         VBox displayPanel = new VBox(10,
                 innerBox,
@@ -120,27 +120,19 @@ public class SetupChunk extends AbstractGUIChunk {
             DirectoryChooser dirChooser = new DirectoryChooser();
             dirChooser.setInitialDirectory(GlobalFiles.getInstance().getLastVisitedDir());
             File dir = dirChooser.showDialog(mainStage);
-            if (dir != null) {
-                String tmp = showDirLabel.getText();
-                showDirLabel.setText(tmp + dir.toString() + "\n");
-                chosenFiles.add(dir);
-                GlobalFiles.getInstance().setLastVisitedDir(dir.getParentFile());
-            }
+            showSelectedFile(dir);
         });
         addFileButton.setOnAction(event -> {
             FileChooser fileChooser = new FileChooser();
             fileChooser.setInitialDirectory(GlobalFiles.getInstance().getLastVisitedDir());
             File file = fileChooser.showOpenDialog(mainStage);
-            if (file != null) {
-                String tmp = showDirLabel.getText();
-                showDirLabel.setText(tmp + file.toString() + "\n");
-                chosenFiles.add(file);
-                GlobalFiles.getInstance().setLastVisitedDir(file.getParentFile());
-            }
+            showSelectedFile(file);
         });
         clearDirsButton.setOnAction(event -> {
             chosenFiles.clear();
             showDirLabel.setText("");
+            canStart = false;
+            refreshState();
         });
 
         algorithmCB.setMaxWidth(Double.MAX_VALUE);
@@ -225,5 +217,16 @@ public class SetupChunk extends AbstractGUIChunk {
     }
     protected FindDuplicatesTask getAddToResultsTask(Map<String, Set<File>> previousResult) {
         return new FindDuplicatesTask(chosenFiles, chosenAlgorithm, previousResult);
+    }
+
+    private void showSelectedFile(File file) {
+        if (file != null) {
+            String tmp = showDirLabel.getText();
+            showDirLabel.setText(tmp + file.toString() + "\n");
+            chosenFiles.add(file);
+            GlobalFiles.getInstance().setLastVisitedDir(file.getParentFile());
+            canStart = true;
+            refreshState();
+        }
     }
 }

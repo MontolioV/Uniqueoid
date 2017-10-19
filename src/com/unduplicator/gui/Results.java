@@ -27,8 +27,14 @@ public class Results {
     private Map<File, String> filesThatRemains = new HashMap<>();
     private Set<String> duplicateChoiceMade = new HashSet<>();
 
-    private BiPredicate<File, String> byParentPredicate = (file, parentToFind) -> file.getParent().equals(parentToFind);
-    private BiPredicate<File, String> byRootPredicate = (file, rootToFind) -> file.getParent().startsWith(rootToFind);
+    private BiPredicate<File, String> byParentPredicate = (file, parentToFind) -> {
+        if (parentToFind.equals("")) return false;
+        return file.getParent().equals(parentToFind);
+    };
+    private BiPredicate<File, String> byRootPredicate = (file, rootToFind) -> {
+        if (rootToFind.equals("")) return false;
+        return file.getParent().startsWith(rootToFind);
+    };
 
     public Results(ChunkManager chunkManager, Map<String, Set<File>> processedFilesMap) {
         this.processedFilesMap = processedFilesMap;

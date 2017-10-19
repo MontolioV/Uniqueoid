@@ -22,19 +22,25 @@ public abstract class AbstractGUIChunk implements NodeRepresentable, LocaleDepen
     }
 
     /**
-     * May change state depending on received state.
+     * May change state depending on received state. Saves new state.
      *
      * @param newState
      * @return <code>true</code> if new state differs, otherwise <code>false</code>
      */
     @Override
     public boolean changeState(GuiStates newState) {
-
         if (!newState.equals(currentState)) {
             currentState = newState;
             return true;
         } else {
             return false;
         }
+    }
+
+    /**
+     * Call <code>changeState()</code> with the current state.
+     */
+    public void refreshState() {
+        changeState(currentState);
     }
 }

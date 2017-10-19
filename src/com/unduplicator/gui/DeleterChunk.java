@@ -3,6 +3,7 @@ package com.unduplicator.gui;
 import com.unduplicator.DeleteFilesTask;
 import com.unduplicator.ResourcesProvider;
 import javafx.application.Platform;
+import javafx.beans.property.BooleanProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
@@ -66,6 +67,7 @@ public class DeleterChunk extends AbstractGUIChunk {
         this.chunkManager = chunkManager;
         setSelfNode(makePane());
         updateLocaleContent();
+        bindToTemplateTF(chunkManager.getPropertiesToBindToTemplateTF());
     }
 
     /**
@@ -136,6 +138,7 @@ public class DeleterChunk extends AbstractGUIChunk {
         checksumListView.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
         checksumListView.getSelectionModel().selectedItemProperty().addListener(
                 (observable, oldValue, newValue) -> {
+                    massChooserTF.setText("");
                     updateChecksumTextRepresentation();
                     if (newValue != null) {
                         updateDuplicatesRepresentation(newValue.getText());
@@ -170,6 +173,9 @@ public class DeleterChunk extends AbstractGUIChunk {
             updateChecksumTextRepresentation();
             alert.showAndWait();
         });
+
+        bindToTemplateTF(chooserByParentButton.disableProperty());
+        bindToTemplateTF(chooserByRootButton.disableProperty());
 
         HBox.setHgrow(massChooserTF, Priority.ALWAYS);
         HBox textBox = new HBox(5, massChooserLabel, massChooserTF);
@@ -300,6 +306,8 @@ public class DeleterChunk extends AbstractGUIChunk {
         chunkManager.chooseOneAmongDuplicates(checksum, selectedFile);
     }
     public void unselectCurrent() {
+        if (checksumListView.getSelectionModel().getSelectedItem() == null) return;
+
         String selectedChecksum = checksumListView.getSelectionModel().getSelectedItem().getText();
         chunkManager.removeSelectionsByChecksum(selectedChecksum);
     }
@@ -452,6 +460,11 @@ public class DeleterChunk extends AbstractGUIChunk {
     }
 
     protected void ignoreSelectedDuplicate() {
+        if (fileListLView.getSelectionModel().getSelectedItem() == null ||
+            checksumListView.getSelectionModel().getSelectedItem() == null) {
+            return;
+        }
+
         File selectedDuplicate = fileListLView.getSelectionModel().getSelectedItem();
         String checksum = checksumListView.getSelectionModel().getSelectedItem().getText();
 
@@ -462,6 +475,15 @@ public class DeleterChunk extends AbstractGUIChunk {
     }
     protected void ignoreDuplicatesByRoot() {
         chunkManager.ignoreDuplicatesFromRoot(massChooserTF.getText());
+    }
+
+    private void bindToTemplateTF(BooleanProperty booleanProperty) {
+        booleanProperty.bind(massChooserTF.textProperty().isEmpty());
+    }
+    protected void bindToTemplateTF(BooleanProperty[] booleanProperties) {
+        for (BooleanProperty booleanProperty : booleanProperties) {
+            bindToTemplateTF(booleanProperty);
+        }
     }
 
     private String freedSpace(Set<File> filesToDelete) {

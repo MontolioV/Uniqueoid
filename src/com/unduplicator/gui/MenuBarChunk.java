@@ -3,6 +3,7 @@ package com.unduplicator.gui;
 import com.unduplicator.GlobalFiles;
 import com.unduplicator.ResourcesProvider;
 import javafx.application.Platform;
+import javafx.beans.property.BooleanProperty;
 import javafx.scene.control.*;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
@@ -265,4 +266,8 @@ public class MenuBarChunk extends AbstractGUIChunk {
         return helpMenu;
     }
 
+    protected BooleanProperty[] getPropertiesToBindToTemplateTF() {
+        return new BooleanProperty[]{removeDirectoryFromResultMI.disableProperty(),
+                                     removeRootFromResultMI.disableProperty()};
+    }
 }
