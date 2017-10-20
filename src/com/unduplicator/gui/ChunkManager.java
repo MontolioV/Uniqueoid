@@ -32,7 +32,7 @@ public class ChunkManager {
     }
 
     //Make chunks
-    private void makeChunks() {
+    protected void makeChunks() {
         menuBarChunk = new MenuBarChunk(this, GUI.getPrimaryStage());
         runtimeChunk = new RuntimeStatusChunk(this);
         setupChunk = new SetupChunk(GUI.getPrimaryStage());

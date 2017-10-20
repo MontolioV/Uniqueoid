@@ -51,13 +51,11 @@ public class GlobalFiles {
     public File getLastVisitedDir() {
         return lastVisitedDir;
     }
-
     public void setLastVisitedDir(File lastVisitedDir) {
         if (lastVisitedDir != null && lastVisitedDir.exists()) {
             this.lastVisitedDir = lastVisitedDir;
         }
     }
-
     public void setLastVisitedDir(String lastVisitedDirStr) {
         setLastVisitedDir(new File(lastVisitedDirStr));
     }

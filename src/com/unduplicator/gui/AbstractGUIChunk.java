@@ -17,7 +17,7 @@ public abstract class AbstractGUIChunk implements NodeRepresentable, LocaleDepen
         return selfNode;
     }
 
-    void setSelfNode(Node node) {
+    protected void setSelfNode(Node node) {
         selfNode = node;
     }
 

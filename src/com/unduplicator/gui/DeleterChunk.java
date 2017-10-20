@@ -305,7 +305,7 @@ public class DeleterChunk extends AbstractGUIChunk {
         String checksum = checksumListView.getSelectionModel().getSelectedItem().getText();
         chunkManager.chooseOneAmongDuplicates(checksum, selectedFile);
     }
-    public void unselectCurrent() {
+    protected void unselectCurrent() {
         if (checksumListView.getSelectionModel().getSelectedItem() == null) return;
 
         String selectedChecksum = checksumListView.getSelectionModel().getSelectedItem().getText();

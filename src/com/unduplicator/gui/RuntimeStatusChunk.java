@@ -127,7 +127,7 @@ public class RuntimeStatusChunk extends AbstractGUIChunk {
         return runtimePane;
     }
 
-    public EventHandler<ActionEvent> getTaskButtonHandler(Supplier<Task<Map<String, Set<File>>>> taskSupplier) {
+    protected EventHandler<ActionEvent> getTaskButtonHandler(Supplier<Task<Map<String, Set<File>>>> taskSupplier) {
         EventHandler<ActionEvent> startButHandler = event -> {
             this.task = taskSupplier.get();
 

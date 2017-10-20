@@ -19,7 +19,7 @@ public class ResourcesProvider {
     }
 
     private ResourcesProvider() {
-        currentLocal = getSavedLocale();
+        currentLocal = loadLocale();
         setBundlesLocale(currentLocal);
         makeSupportedLocalesSet();
     }
@@ -33,7 +33,7 @@ public class ResourcesProvider {
         supportedLocales = Collections.unmodifiableSet(result);
     }
 
-    protected Locale getSavedLocale() {
+    protected Locale loadLocale() {
         try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(GlobalFiles.getInstance().getLocaleFile()))) {
             return (Locale) ois.readObject();
         } catch (IOException | ClassNotFoundException e) {

@@ -157,7 +157,7 @@ public class GUI extends Application{
         });
     }
 
-    public Stage getPrimaryStage() {
+    protected Stage getPrimaryStage() {
         return primaryStage;
     }
 
