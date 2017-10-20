@@ -41,7 +41,7 @@ public class DeleterChunk extends AbstractGUIChunk {
 
     private Task<Void> showDuplicatesTask;
 
-    private HashMap<File, Button> fileButtonHashMap;
+    private Map<File, Button> fileButtonHashMap;
     private ListView<Text> checksumListView = new ListView<>();
     private ListView<File> fileListLView;
     private Set<Text> checksumTextSet;
@@ -130,7 +130,7 @@ public class DeleterChunk extends AbstractGUIChunk {
         fileListLView = new ListView<>(FXCollections.observableArrayList());
         fileListLView.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
         fileListLView.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
-            selectFileAndDisableButton(newValue);
+            selectFile(newValue);
         });
     }
     private void makeChecksumListView() {
@@ -291,8 +291,20 @@ public class DeleterChunk extends AbstractGUIChunk {
                 buttonsBox);
     }
 
-    private void selectFileAndDisableButton(File selectedFile) {
+    private void selectFile(File selectedFile) {
         if (selectedFile == null) return;
+
+        showSelected(selectedFile);
+
+        String checksum = checksumListView.getSelectionModel().getSelectedItem().getText();
+        chunkManager.chooseOneAmongDuplicates(checksum, selectedFile);
+    }
+    private void showSelected(File selectedFile) {
+        if (selectedFile == null) {
+            System.out.println(1);
+            return;
+        }
+
         massChooserTF.setText(selectedFile.getParent());
         Button linkedButton = fileButtonHashMap.get(selectedFile);
         if (linkedButton == null || linkedButton.isDisabled()) return;
@@ -301,9 +313,6 @@ public class DeleterChunk extends AbstractGUIChunk {
         linkedButton.setDisable(true);
         fileListLView.getSelectionModel().select(selectedFile);
         fileListLView.scrollTo(selectedFile);
-
-        String checksum = checksumListView.getSelectionModel().getSelectedItem().getText();
-        chunkManager.chooseOneAmongDuplicates(checksum, selectedFile);
     }
     protected void unselectCurrent() {
         if (checksumListView.getSelectionModel().getSelectedItem() == null) return;
@@ -330,7 +339,7 @@ public class DeleterChunk extends AbstractGUIChunk {
         double height = 200;
         Set<File> duplicateFiles = chunkManager.getDuplicateFilesCopy(checksum);
         ObservableList<File> fileListViewValues = FXCollections.observableArrayList();
-        fileButtonHashMap = new HashMap<>();
+        Map<File, Button> personalFileButtonHashMap = Collections.synchronizedMap(new HashMap<>());
         previewPane.getChildren().clear();
         ArrayList<Task<Void>> tasks = new ArrayList<>();
 
@@ -339,8 +348,12 @@ public class DeleterChunk extends AbstractGUIChunk {
 
             @Override
             protected Void call() throws Exception {
-                Thread.sleep(200);
-                if (isOutdated()) return null;
+                try {
+                    Thread.sleep(200);
+                } catch (InterruptedException ex) {
+                    ex.printStackTrace();
+                }
+                if (isCancelled() || isOutdated()) return null;
 
                 Executor pool = Executors.newFixedThreadPool(4, r -> {
                     Thread daemonThr = new Thread(r);
@@ -366,7 +379,7 @@ public class DeleterChunk extends AbstractGUIChunk {
                             previewButton.setMaxSize(width, height);
                             previewButton.setContentDisplay(ContentDisplay.TOP);
                             previewButton.setOnAction(event1 -> {
-                                selectFileAndDisableButton(file);
+                                selectFile(file);
                             });
                             if (file.length() < MAX_IMG_SIZE && !isCancelled()) {
                                 try (BufferedInputStream bis = new BufferedInputStream(new FileInputStream(file))) {
@@ -379,7 +392,7 @@ public class DeleterChunk extends AbstractGUIChunk {
 
                             if (isCancelled()) return null;
 
-                            fileButtonHashMap.put(file, previewButton);
+                            personalFileButtonHashMap.put(file, previewButton);
                             Platform.runLater(() -> {
                                 fileListViewValues.add(file);
                                 previewPane.getChildren().add(previewButton);
@@ -402,7 +415,7 @@ public class DeleterChunk extends AbstractGUIChunk {
                     for (File file : duplicateFiles) {
                         if (isCancelled()) break;
                         if (chunkManager.isFileChosen(file)) {
-                            selectFileAndDisableButton(file);
+                            showSelected(file);
                         }
                     }
                 });
@@ -432,6 +445,7 @@ public class DeleterChunk extends AbstractGUIChunk {
             if (showDuplicatesTask != null) showDuplicatesTask.cancel();
             showDuplicatesTask = newTask;
             fileListLView.setItems(fileListViewValues);
+            fileButtonHashMap = personalFileButtonHashMap;
         }
 
         runTaskSeparateThread(showDuplicatesTask, idle, resProvider.getStrFromGUIBundle("previewProgressLabel"));
