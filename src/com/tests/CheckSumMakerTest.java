@@ -1,6 +1,6 @@
 package com.tests;
 
-import com.unduplicator.CheckSumMaker;
+import com.unduplicator.logic.CheckSumMaker;
 
 import java.security.NoSuchAlgorithmException;
 

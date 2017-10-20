@@ -1,5 +1,7 @@
-package com.unduplicator;
+package com.unduplicator.logic;
 
+import com.unduplicator.GlobalFiles;
+import com.unduplicator.ResourcesProvider;
 import javafx.concurrent.Task;
 
 import java.io.BufferedWriter;

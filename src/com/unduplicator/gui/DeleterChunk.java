@@ -1,7 +1,7 @@
 package com.unduplicator.gui;
 
-import com.unduplicator.DeleteFilesTask;
 import com.unduplicator.ResourcesProvider;
+import com.unduplicator.logic.DeleteFilesTask;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.collections.FXCollections;

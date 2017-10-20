@@ -1,7 +1,7 @@
 package com.tests;
 
-import com.unduplicator.DirectoryHandler;
-import com.unduplicator.FileAndChecksum;
+import com.unduplicator.logic.DirectoryHandler;
+import com.unduplicator.logic.FileAndChecksum;
 import org.junit.Before;
 import org.junit.Test;
 

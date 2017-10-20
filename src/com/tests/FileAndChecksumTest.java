@@ -1,6 +1,6 @@
 package com.tests;
 
-import com.unduplicator.FileAndChecksum;
+import com.unduplicator.logic.FileAndChecksum;
 import org.junit.Before;
 import org.junit.Test;
 

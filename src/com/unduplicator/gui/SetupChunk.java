@@ -1,8 +1,8 @@
 package com.unduplicator.gui;
 
-import com.unduplicator.FindDuplicatesTask;
 import com.unduplicator.GlobalFiles;
 import com.unduplicator.ResourcesProvider;
+import com.unduplicator.logic.FindDuplicatesTask;
 import javafx.collections.FXCollections;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;

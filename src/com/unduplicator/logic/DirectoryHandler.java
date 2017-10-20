@@ -1,4 +1,6 @@
-package com.unduplicator;
+package com.unduplicator.logic;
+
+import com.unduplicator.ResourcesProvider;
 
 import java.io.File;
 import java.io.IOException;

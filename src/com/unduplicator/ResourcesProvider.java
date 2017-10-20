@@ -63,10 +63,9 @@ public class ResourcesProvider {
         bundles.put("exceptions", exceptionsBundle);
         bundles.put("gui", guiBundle);
         bundles.put("messages", messagesBundle);
+        saveLocale();
 
         readWriteLock.writeLock().unlock();
-
-        saveLocale();
     }
 
     public String getStrFromBundle(String bundleName, String stringKey) {

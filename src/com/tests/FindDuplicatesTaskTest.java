@@ -1,6 +1,6 @@
 package com.tests;
 
-import com.unduplicator.FindDuplicatesTask;
+import com.unduplicator.logic.FindDuplicatesTask;
 import javafx.embed.swing.JFXPanel;
 import org.junit.Before;
 import org.junit.BeforeClass;

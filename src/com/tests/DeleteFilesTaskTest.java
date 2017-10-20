@@ -1,6 +1,6 @@
 package com.tests;
 
-import com.unduplicator.DeleteFilesTask;
+import com.unduplicator.logic.DeleteFilesTask;
 import javafx.application.Platform;
 import javafx.embed.swing.JFXPanel;
 import org.junit.BeforeClass;

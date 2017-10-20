@@ -1,6 +1,6 @@
 package com.unduplicator.gui;
 
-import com.unduplicator.FindDuplicatesTask;
+import com.unduplicator.logic.FindDuplicatesTask;
 import javafx.beans.property.BooleanProperty;
 import javafx.scene.Parent;
 import javafx.scene.control.Alert;

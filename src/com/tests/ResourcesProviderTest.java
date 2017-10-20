@@ -7,7 +7,8 @@ import java.util.Locale;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * <p>Created by MontolioV on 21.08.17.
@@ -15,25 +16,25 @@ import static org.junit.Assert.*;
 public class ResourcesProviderTest {
 
     @Test
-    public void getInstance() throws Exception {
+    public synchronized void getInstance() throws Exception {
         ResourcesProvider rp1 = ResourcesProvider.getInstance();
         ResourcesProvider rp2 = ResourcesProvider.getInstance();
         assertTrue(rp1.equals(rp2));
     }
 
     @Test
-    public void setBundlesLocale() throws Exception {
+    public synchronized void setBundlesLocale() throws Exception {
         ResourcesProvider.getInstance().setBundlesLocale(new Locale("en", "US"));
         String defaultMessage = ResourcesProvider.getInstance().getStrFromBundle("messages", "taskProcessing");
-        assertEquals("Processing...", defaultMessage);
         ResourcesProvider.getInstance().setBundlesLocale(new Locale("ru", "RU"));
         String newMessage = ResourcesProvider.getInstance().getStrFromBundle("messages", "taskProcessing");
-        assertNotEquals(defaultMessage, newMessage);
+
+        assertEquals("Processing...", defaultMessage);
         assertEquals("Выполняется...", newMessage);
     }
 
     @Test
-    public void getStrFromBundle() throws Exception {
+    public synchronized void getStrFromBundle() throws Exception {
         ResourcesProvider rp = ResourcesProvider.getInstance();
         rp.setBundlesLocale(new Locale("ru", "RU"));
         assertEquals("Возникла ошибка", rp.getStrFromBundle("messages", "error"));
@@ -43,7 +44,7 @@ public class ResourcesProviderTest {
         concurrentAccess();
     }
 
-    private void concurrentAccess() {
+    private synchronized void concurrentAccess() {
         ResourcesProvider rp = ResourcesProvider.getInstance();
         AtomicBoolean localeIsChanged = new AtomicBoolean(false);
         rp.setBundlesLocale(new Locale("ru", "RU"));

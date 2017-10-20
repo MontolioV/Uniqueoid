@@ -1,4 +1,4 @@
-package com.unduplicator;
+package com.unduplicator.logic;
 
 import java.io.File;
 
