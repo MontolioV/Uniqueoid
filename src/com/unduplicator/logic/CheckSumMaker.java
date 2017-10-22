@@ -15,6 +15,7 @@ import java.security.NoSuchAlgorithmException;
 public class CheckSumMaker {
     private final MessageDigest MESSAGE_DIGEST;
     private ResourcesProvider resProvider = ResourcesProvider.getInstance();
+    private final int MAX_BUFFER_SIZE = (int) (Math.pow(2, 20) * 10);   //10 MB
 
     public CheckSumMaker(String mdAlgorithm) {
         try {
@@ -39,7 +40,8 @@ public class CheckSumMaker {
 
     private byte[] makeBytesHash(File file) throws IOException {
         try (BufferedInputStream bufferedIS = new BufferedInputStream(new FileInputStream(file))) {
-            byte[] digestBuffer = new byte[1024];
+            int bufferSize = file.length() < MAX_BUFFER_SIZE ? (int) file.length() : MAX_BUFFER_SIZE;
+            byte[] digestBuffer = new byte[bufferSize];
             int inputStreamResponse = bufferedIS.read(digestBuffer);
 
             while (inputStreamResponse > -1) {

@@ -24,6 +24,7 @@ import java.text.DecimalFormat;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -39,6 +40,7 @@ public class DeleterChunk extends AbstractGUIChunk {
 
     private AtomicLong previewTimeStamp = new AtomicLong();
 
+    private Executor deleterExecutor;
     private Task<Void> showDuplicatesTask;
 
     private Map<File, Button> fileButtonHashMap;
@@ -65,6 +67,7 @@ public class DeleterChunk extends AbstractGUIChunk {
 
     public DeleterChunk(ChunkManager chunkManager) {
         this.chunkManager = chunkManager;
+        makeThreadExecutor();
         setSelfNode(makePane());
         updateLocaleContent();
         bindToTemplateTF(chunkManager.getPropertiesToBindToTemplateTF());
@@ -345,17 +348,19 @@ public class DeleterChunk extends AbstractGUIChunk {
 
         Task<Void> newTask = new Task<Void>() {
             AtomicInteger progress = new AtomicInteger();
+            ExecutorService pool;
 
             @Override
             protected Void call() throws Exception {
                 try {
                     Thread.sleep(200);
                 } catch (InterruptedException ex) {
-                    ex.printStackTrace();
+                    //Not really useful
+//                    ex.printStackTrace();
                 }
                 if (isCancelled() || isOutdated()) return null;
 
-                Executor pool = Executors.newFixedThreadPool(4, r -> {
+                pool = Executors.newFixedThreadPool(4, r -> {
                     Thread daemonThr = new Thread(r);
                     daemonThr.setDaemon(true);
                     return daemonThr;
@@ -419,7 +424,7 @@ public class DeleterChunk extends AbstractGUIChunk {
                         }
                     }
                 });
-
+                pool.shutdown();
                 return null;
             }
 
@@ -427,6 +432,7 @@ public class DeleterChunk extends AbstractGUIChunk {
             public boolean cancel(boolean mayInterruptIfRunning) {
                 boolean result = super.cancel(mayInterruptIfRunning);
                 tasks.forEach(Task::cancel);
+                if (pool != null) pool.shutdown();
                 return result;
             }
 
@@ -446,10 +452,8 @@ public class DeleterChunk extends AbstractGUIChunk {
             showDuplicatesTask = newTask;
             fileListLView.setItems(fileListViewValues);
             fileButtonHashMap = personalFileButtonHashMap;
+            runTaskSeparateThread(showDuplicatesTask, idle, resProvider.getStrFromGUIBundle("previewProgressLabel"));
         }
-
-        runTaskSeparateThread(showDuplicatesTask, idle, resProvider.getStrFromGUIBundle("previewProgressLabel"));
-
     }
     private void updateChecksumListView() {
         checksumTextSet = new HashSet<>();
@@ -510,9 +514,15 @@ public class DeleterChunk extends AbstractGUIChunk {
         }
     }
 
+    private void makeThreadExecutor() {
+        deleterExecutor = Executors.newCachedThreadPool(runnable -> {
+            Thread daemonThr = new Thread(runnable);
+            daemonThr.setDaemon(true);
+            return daemonThr;
+        });
+    }
     private void runTaskSeparateThread(Task task, Supplier<Void> postProcessing, String name) {
-        Thread taskThread = new Thread(task);
-        Thread controlThread = new Thread(() -> {
+        Runnable control = () -> {
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException e) {
@@ -551,10 +561,9 @@ public class DeleterChunk extends AbstractGUIChunk {
             } else {
                 postProcessing.get();
             }
-        });
-        taskThread.setDaemon(true);
-        controlThread.setDaemon(true);
-        taskThread.start();
-        controlThread.start();
+        };
+
+        deleterExecutor.execute(control);
+        deleterExecutor.execute(task);
     }
 }

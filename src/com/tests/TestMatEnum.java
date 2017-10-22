@@ -20,9 +20,9 @@ public enum TestMatEnum {
     TestMatEnum(File file, boolean isExactCopy) {
         this.FILE = file;
         if (isExactCopy) {
-            this.SHA_256_CHECKSUM = "7cd376319c008f8580c0c54f09a6a76fe3465e68daaf3539f168b88cb3bb7f91";
+            this.SHA_256_CHECKSUM = "989850b8a02fc4528e7e04644d936a6946f67166159ec0a79b04b6e8ef89e072";
         } else {
-            this.SHA_256_CHECKSUM = "bc24bb4e2ebb6e9072787a657710905c5fc38d3044557022f2aa60076975377b";
+            this.SHA_256_CHECKSUM = "cad53d7a09f73482c0aab473d5d13f125c0921ea18a4bd648d33f534e0e981c7";
         }
     }
 

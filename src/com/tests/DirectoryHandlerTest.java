@@ -28,11 +28,15 @@ public class DirectoryHandlerTest {
     @Test
     public void run_1Thread() throws Exception {
         DirectoryHandler dirHandler;
-        dirHandler = new DirectoryHandler(new File("test_mat"), "SHA-256", queueFilesChSs, queueExMessages);
+        dirHandler = makeDirectoryHandler(new File("test_mat"), "SHA-256", queueFilesChSs, queueExMessages);
         ForkJoinPool fjPool = new ForkJoinPool();
 
         fjPool.invoke(dirHandler);
 
         assertEquals(7, queueFilesChSs.size() + queueExMessages.size());
+    }
+
+    protected DirectoryHandler makeDirectoryHandler(File file, String hashAlgorithm, ConcurrentLinkedQueue<FileAndChecksum> queueProcessed, ConcurrentLinkedQueue<String> queueExMessages) {
+        return new DirectoryHandler(file, hashAlgorithm, queueProcessed, queueExMessages);
     }
 }

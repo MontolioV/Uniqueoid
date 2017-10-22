@@ -16,14 +16,14 @@ import static org.junit.Assert.assertTrue;
 public class ResourcesProviderTest {
 
     @Test
-    public synchronized void getInstance() throws Exception {
+    public void getInstance() throws Exception {
         ResourcesProvider rp1 = ResourcesProvider.getInstance();
         ResourcesProvider rp2 = ResourcesProvider.getInstance();
         assertTrue(rp1.equals(rp2));
     }
 
     @Test
-    public synchronized void setBundlesLocale() throws Exception {
+    public void setBundlesLocale() throws Exception {
         ResourcesProvider.getInstance().setBundlesLocale(new Locale("en", "US"));
         String defaultMessage = ResourcesProvider.getInstance().getStrFromBundle("messages", "taskProcessing");
         ResourcesProvider.getInstance().setBundlesLocale(new Locale("ru", "RU"));
@@ -34,7 +34,7 @@ public class ResourcesProviderTest {
     }
 
     @Test
-    public synchronized void getStrFromBundle() throws Exception {
+    public void getStrFromBundle() throws Exception {
         ResourcesProvider rp = ResourcesProvider.getInstance();
         rp.setBundlesLocale(new Locale("ru", "RU"));
         assertEquals("Возникла ошибка", rp.getStrFromBundle("messages", "error"));
@@ -44,7 +44,7 @@ public class ResourcesProviderTest {
         concurrentAccess();
     }
 
-    private synchronized void concurrentAccess() {
+    private void concurrentAccess() {
         ResourcesProvider rp = ResourcesProvider.getInstance();
         AtomicBoolean localeIsChanged = new AtomicBoolean(false);
         rp.setBundlesLocale(new Locale("ru", "RU"));
@@ -86,6 +86,12 @@ public class ResourcesProviderTest {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
+        }
+
+        try {
+            writer.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
     }
 }

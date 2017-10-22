@@ -29,7 +29,7 @@ public class RuntimeStatusChunk extends AbstractGUIChunk {
     private ResourcesProvider resProvider = ResourcesProvider.getInstance();
     private ChunkManager chunkManager;
 
-    private Task<Map<String, Set<File>>> task;
+    private Task<Map<String, Set<File>>> runningTask;
 
     private Button stopButton = new Button();
     private Button toSetupBut = new Button();
@@ -102,8 +102,8 @@ public class RuntimeStatusChunk extends AbstractGUIChunk {
         toSetupBut.setOnAction(event -> chunkManager.showSetupNode());
         toResultBut.setOnAction(event -> chunkManager.showDeletionNode());
         stopButton.setOnAction(event -> {
-            if (task != null) {
-                task.cancel();
+            if (runningTask != null) {
+                runningTask.cancel();
             }
         });
 
@@ -129,20 +129,21 @@ public class RuntimeStatusChunk extends AbstractGUIChunk {
 
     protected EventHandler<ActionEvent> getTaskButtonHandler(Supplier<Task<Map<String, Set<File>>>> taskSupplier) {
         EventHandler<ActionEvent> startButHandler = event -> {
-            this.task = taskSupplier.get();
+            Task<Map<String, Set<File>>> localTask = taskSupplier.get();
+            this.runningTask = localTask;
 
             long startTime = System.currentTimeMillis();
             messagesTA.clear();
-            progressBar.progressProperty().bind(task.progressProperty());
-            poolStatusLabel.textProperty().bind(task.titleProperty());
-            task.messageProperty().addListener((observable, oldValue, newValue) -> {
+            progressBar.progressProperty().bind(localTask.progressProperty());
+            poolStatusLabel.textProperty().bind(localTask.titleProperty());
+            localTask.messageProperty().addListener((observable, oldValue, newValue) -> {
                 if (messagesTA.getParagraphs().size() > 100) {
                     messagesTA.setText(resProvider.getStrFromMessagesBundle("seeLog")
                                        + GlobalFiles.getInstance().getLogFile());
                 }
                 messagesTA.appendText("\n" + newValue);
             });
-            task.stateProperty().addListener((observable, oldValue, newValue) -> {
+            localTask.stateProperty().addListener((observable, oldValue, newValue) -> {
                 switch (newValue) {
                     case READY:
                         chunkManager.updateChunksStates(GuiStates.RUNNING);
@@ -157,7 +158,7 @@ public class RuntimeStatusChunk extends AbstractGUIChunk {
                         break;
                     case SUCCEEDED:
                         chunkManager.updateChunksStates(GuiStates.HAS_RESULTS);
-                        chunkManager.setResults(task.getValue());
+                        chunkManager.setResults(localTask.getValue());
                         chunkManager.makeDeleterChunk();
 
                         long durationMS = System.currentTimeMillis() - startTime;
@@ -178,10 +179,12 @@ public class RuntimeStatusChunk extends AbstractGUIChunk {
             });
             Thread taskThread = new Thread(() -> {
                 try {
-                    task.run();
-                    task.get();
+                    localTask.run();
+                    localTask.get();
                 } catch (InterruptedException | ExecutionException e) {
                     chunkManager.showException(e);
+                }finally {
+                    runningTask = null; //help GC
                 }
             });
             taskThread.setDaemon(true);

@@ -17,6 +17,7 @@ import java.util.concurrent.ForkJoinPool;
 /**
  * Provides task of finding duplicating files in given directories.
  * Groups files by their checksum so that copies are easy to find.
+ * Divide and conquer strategy.
  * <p>Created by MontolioV on 12.06.17.
  */
 public class FindDuplicatesTask extends Task<Map<String, Set<File>>> {
@@ -109,22 +110,23 @@ public class FindDuplicatesTask extends Task<Map<String, Set<File>>> {
 
     private void runTasksInNewThread() {
         fjThread = new Thread(() -> {
-            ArrayList<DirectoryHandler> taskList = new ArrayList<>();
-            DIRECTORIES.forEach(file -> taskList.add(new DirectoryHandler(file,
-                    HASH_ALGORITHM,
-                    queueProcessed,
-                    queueExMessages)));
-            taskList.forEach(fjPool::execute);
-            taskList.forEach((directoryHandler) -> {
-                try {
-                    directoryHandler.get();
-                } catch (InterruptedException | ExecutionException e) {
-                    e.printStackTrace();
-                    updateMessage(e.toString() + "\n");
-                }
-            });
+            File[] files = new File[DIRECTORIES.size()];
+            files = DIRECTORIES.toArray(files);
+            DirectoryHandler directoryHandler = makeDirectoryHandler(files, HASH_ALGORITHM, queueProcessed, queueExMessages);
+            fjPool.execute(directoryHandler);
+            try {
+                directoryHandler.get();
+            } catch (InterruptedException | ExecutionException e) {
+                e.printStackTrace();
+                updateMessage(e.toString() + "\n");
+            }
+
         });
+
         fjThread.start();
+    }
+    protected DirectoryHandler makeDirectoryHandler(File[] files, String hashAlgorithm, ConcurrentLinkedQueue<FileAndChecksum> queueProcessed, ConcurrentLinkedQueue<String> queueExMessages) {
+        return new DirectoryHandler(files, hashAlgorithm, queueProcessed, queueExMessages);
     }
 
     private void controlAndOutputResult() throws InterruptedException {

@@ -33,10 +33,14 @@ public class FindDuplicatesTaskTest {
         dirList.add(new File("test_mat"));
     }
 
+    protected FindDuplicatesTask makeFindDuplicatesTask(List<File> directories, String hash_algorithm) {
+        return new FindDuplicatesTask(directories, hash_algorithm);
+    }
+
     @Test
     public void call() throws Exception {
         Map<String, Set<File>> result;
-        task = new FindDuplicatesTask(dirList, algorithm);
+        task = makeFindDuplicatesTask(dirList, algorithm);
 
         //Prepare control hashmap
         HashMap<String, Set<File>> control = new HashMap<>();
@@ -65,7 +69,7 @@ public class FindDuplicatesTaskTest {
         for (int i = 0; i < 10_000; i++) {
             dirList.add(new File("test_mat"));
         }
-        task = new FindDuplicatesTask(dirList, algorithm);
+        task = makeFindDuplicatesTask(dirList, algorithm);
 
         Thread trd = new Thread(() -> task.run());
         trd.start();
@@ -83,7 +87,7 @@ public class FindDuplicatesTaskTest {
     public void countFiles() throws Exception {
         int result = 0;
         for (File file : dirList) {
-            result += new FindDuplicatesTask(dirList, algorithm).countFiles(file);
+            result += makeFindDuplicatesTask(dirList, algorithm).countFiles(file);
         }
 
         assertEquals(7, result);

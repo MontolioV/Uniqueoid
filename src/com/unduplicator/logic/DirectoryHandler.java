@@ -14,6 +14,7 @@ import java.util.concurrent.RecursiveAction;
 
 /**
  * Directory Handler takes directory and puts checksums of all files recursively in storage.
+ * ForkJoin divide and conquer strategy. Faster and more resource demanding.
  * <p>Created by MontolioV on 06.06.17.
  */
 public class DirectoryHandler extends RecursiveAction {
@@ -24,7 +25,7 @@ public class DirectoryHandler extends RecursiveAction {
     private final String HASH_ALGORITHM;
     private ResourcesProvider resProvider = ResourcesProvider.getInstance();
     private ArrayList<ForkJoinTask<Void>> tasks = new ArrayList<>();
-    private final long LARGE_FILE_SIZE = (long) (100 * Math.pow(2, 20));
+    private final long LARGE_FILE_SIZE = (long) Math.pow(2, 30);    //1 GB
     private File largeFile;
 
     public DirectoryHandler(File file,
@@ -52,47 +53,7 @@ public class DirectoryHandler extends RecursiveAction {
     protected void compute() {
         File[] remainder = splitLargeDirectory();
 
-        for (File file : remainder) {
-            if (Files.isSymbolicLink(file.toPath())) {
-                try {
-                    QUEUE_EX_MESSAGES.offer(resProvider.getStrFromMessagesBundle("isLink")
-                                    + "\n" + resProvider.getStrFromMessagesBundle("link") + file.toString()
-                                    + "\n" + resProvider.getStrFromMessagesBundle("realPath") + file.toPath().toRealPath().toString());
-                } catch (IOException e) {
-                    exceptionToQueue(e);
-                }
-            } else if (file.isFile()) {
-                if (file.length() < LARGE_FILE_SIZE) {
-                    processFile(file);
-                } else {
-                    if (largeFile == null) {
-                        largeFile = file;
-                    } else {
-                        DirectoryHandler task = new DirectoryHandler(file,
-                                HASH_ALGORITHM,
-                                QUEUE_FILE_AND_CHECKSUM,
-                                QUEUE_EX_MESSAGES);
-                        tasks.add(task.fork());
-                    }
-                }
-            } else if (file.isDirectory()) {
-                if (file.listFiles() == null) {
-                    QUEUE_EX_MESSAGES.offer(
-                            resProvider.getStrFromMessagesBundle("cantGetFilesFromDir") +
-                                    "\t" + file.toString());
-                } else {
-                    DirectoryHandler task = new DirectoryHandler(file.listFiles(),
-                            HASH_ALGORITHM,
-                            QUEUE_FILE_AND_CHECKSUM,
-                            QUEUE_EX_MESSAGES);
-                    tasks.add(task.fork());
-                }
-            } else {
-                QUEUE_EX_MESSAGES.offer(
-                        resProvider.getStrFromMessagesBundle("notFileNotDir") +
-                                "\t" + file.toString());
-            }
-        }
+        analizeFiles(remainder);
 
         if (largeFile != null) {
             QUEUE_EX_MESSAGES.offer(resProvider.getStrFromMessagesBundle("bigFile") +
@@ -102,7 +63,58 @@ public class DirectoryHandler extends RecursiveAction {
         tasks.forEach(ForkJoinTask::join);
     }
 
-    private void processFile(File file) {
+    protected void analizeFiles(File[] files) {
+        for (File file : files) {
+            if (Files.isSymbolicLink(file.toPath())) {
+                try {
+                    QUEUE_EX_MESSAGES.offer(resProvider.getStrFromMessagesBundle("isLink")
+                            + "\n" + resProvider.getStrFromMessagesBundle("link") + file.toString()
+                            + "\n" + resProvider.getStrFromMessagesBundle("realPath") + file.toPath().toRealPath().toString());
+                } catch (IOException e) {
+                    exceptionToQueue(e);
+                }
+            } else if (file.isFile()) {
+                if (file.length() < LARGE_FILE_SIZE) {
+                    processFile(file);
+                } else {
+                    split(file);
+                }
+            } else if (file.isDirectory()) {
+                if (file.listFiles() == null) {
+                    QUEUE_EX_MESSAGES.offer(
+                            resProvider.getStrFromMessagesBundle("cantGetFilesFromDir") +
+                                    "\t" + file.toString());
+                } else {
+                    split(file.listFiles());
+                }
+            } else {
+                QUEUE_EX_MESSAGES.offer(
+                        resProvider.getStrFromMessagesBundle("notFileNotDir") +
+                                "\t" + file.toString());
+            }
+        }
+    }
+
+    protected void split(File file) {
+        if (largeFile == null) {
+            largeFile = file;
+        } else {
+            DirectoryHandler task = new DirectoryHandler(file,
+                    HASH_ALGORITHM,
+                    QUEUE_FILE_AND_CHECKSUM,
+                    QUEUE_EX_MESSAGES);
+            tasks.add(task.fork());
+        }
+    }
+    protected void split(File[] files) {
+        DirectoryHandler task = new DirectoryHandler(files,
+                HASH_ALGORITHM,
+                QUEUE_FILE_AND_CHECKSUM,
+                QUEUE_EX_MESSAGES);
+        tasks.add(task.fork());
+    }
+
+    protected void processFile(File file) {
         try {
             FileAndChecksum pair = new FileAndChecksum(file, CHECKSUM_MAKER.makeCheckSum(file));
             QUEUE_FILE_AND_CHECKSUM.offer(pair);
@@ -136,11 +148,7 @@ public class DirectoryHandler extends RecursiveAction {
         for (int i = 0; i < tasksNumber; i++) {
             File[] files = Arrays.copyOfRange(FILES_TO_HANDLE,
                     i * THRESHOLD, i * THRESHOLD + THRESHOLD);
-            DirectoryHandler task = new DirectoryHandler(files,
-                    HASH_ALGORITHM,
-                    QUEUE_FILE_AND_CHECKSUM,
-                    QUEUE_EX_MESSAGES);
-            tasks.add(task.fork());
+            split(files);
         }
         return Arrays.copyOfRange(FILES_TO_HANDLE, THRESHOLD * tasksNumber, FILES_TO_HANDLE.length);
     }
