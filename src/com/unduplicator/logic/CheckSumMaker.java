@@ -45,7 +45,11 @@ public class CheckSumMaker {
             int inputStreamResponse = bufferedIS.read(digestBuffer);
 
             while (inputStreamResponse > -1) {
-                MESSAGE_DIGEST.update(digestBuffer);
+                if (inputStreamResponse == bufferSize) {
+                    MESSAGE_DIGEST.update(digestBuffer);
+                } else {
+                    MESSAGE_DIGEST.update(digestBuffer, 0, inputStreamResponse);
+                }
                 inputStreamResponse = bufferedIS.read(digestBuffer);
             }
             return MESSAGE_DIGEST.digest();
