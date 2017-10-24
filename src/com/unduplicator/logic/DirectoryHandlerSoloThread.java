@@ -19,8 +19,8 @@ public class DirectoryHandlerSoloThread extends DirectoryHandler {
     }
 
     @Override
-    protected void split(File file) {
-        processFile(file);
+    protected void split(File largeFile) {
+        processFile(largeFile);
     }
 
     @Override

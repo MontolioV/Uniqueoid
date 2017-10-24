@@ -303,10 +303,7 @@ public class DeleterChunk extends AbstractGUIChunk {
         chunkManager.chooseOneAmongDuplicates(checksum, selectedFile);
     }
     private void showSelected(File selectedFile) {
-        if (selectedFile == null) {
-            System.out.println(1);
-            return;
-        }
+        if (selectedFile == null) return;
 
         massChooserTF.setText(selectedFile.getParent());
         Button linkedButton = fileButtonHashMap.get(selectedFile);

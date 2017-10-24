@@ -65,6 +65,7 @@ public class FindDuplicatesTask extends Task<Map<String, Set<File>>> {
             preparations();
             runTasksInNewThread();
             controlAndOutputResult();
+            finishing();
         } finally {
             if (logBW != null) {
                 logBW.close();
@@ -120,7 +121,7 @@ public class FindDuplicatesTask extends Task<Map<String, Set<File>>> {
                 e.printStackTrace();
                 updateMessage(e.toString() + "\n");
             }
-
+            DirectoryHandler.joinLongTasks();
         });
 
         fjThread.start();
@@ -130,7 +131,8 @@ public class FindDuplicatesTask extends Task<Map<String, Set<File>>> {
     }
 
     private void controlAndOutputResult() throws InterruptedException {
-        StringJoiner sb = new StringJoiner("\n");
+        StringJoiner sbMessages = new StringJoiner("\n");
+        Formatter formatter = new Formatter();
         while (fjThread.isAlive() || !queueProcessed.isEmpty() || !queueExMessages.isEmpty()) {
             //Cancellation
             if (isCancelled()) {
@@ -165,18 +167,29 @@ public class FindDuplicatesTask extends Task<Map<String, Set<File>>> {
             }
 
             if (!queueExMessages.isEmpty()) {
-                sb.add(queueExMessages.poll());
-            } else if (sb.length() > 0) {
-                updateMessage(sb.toString());
-                sb = new StringJoiner("\n");
+                sbMessages.add(queueExMessages.poll());
+            } else if (sbMessages.length() > 0) {
+                updateMessage(sbMessages.toString());
+                sbMessages = new StringJoiner("\n");
             }
 
-            updateTitle(fjPool.toString());
+            formatter.format("Parallelism: %s, Size: %s, Active: %s, Running: %s, Steals: %s, Tasks: %s, Submissions: %s",
+                    fjPool.getParallelism(),
+                    fjPool.getPoolSize(),
+                    fjPool.getActiveThreadCount(),
+                    fjPool.getRunningThreadCount(),
+                    fjPool.getStealCount(),
+                    fjPool.getQueuedTaskCount(),
+                    fjPool.getQueuedSubmissionCount());
+            updateTitle(formatter.toString());
+            formatter = new Formatter();
             updateProgress(byteCounter, byteTotal);
         }
 
         updateMessage(resProvider.getStrFromMessagesBundle("hashsumsCount") + filesCounter);
+    }
 
+    protected void finishing() throws InterruptedException {
         //Just to be sure
         fjThread.join();
     }
