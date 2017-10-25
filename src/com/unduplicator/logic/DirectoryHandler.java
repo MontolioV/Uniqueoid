@@ -5,9 +5,12 @@ import com.unduplicator.ResourcesProvider;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Set;
+import java.util.StringJoiner;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.RecursiveAction;
 
 /**
@@ -16,7 +19,7 @@ import java.util.concurrent.RecursiveAction;
  * <p>Created by MontolioV on 06.06.17.
  */
 public class DirectoryHandler extends RecursiveAction {
-    private static final List<DirectoryHandler> longTasks = Collections.synchronizedList(new ArrayList<>());
+    private static Set<DirectoryHandler> runningTasks = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     private final File[] FILES_TO_HANDLE;
     private final CheckSumMaker CHECKSUM_MAKER;
@@ -24,7 +27,6 @@ public class DirectoryHandler extends RecursiveAction {
     private final ConcurrentLinkedQueue<String> QUEUE_EX_MESSAGES;
     private final String HASH_ALGORITHM;
     private ResourcesProvider resProvider = ResourcesProvider.getInstance();
-    private ArrayList<ForkJoinTask<Void>> fastTasks = new ArrayList<>();
     private final long LARGE_FILE_SIZE = (long) (Math.pow(2, 20) * 10);    //10 MB
 
     public DirectoryHandler(File file,
@@ -52,7 +54,7 @@ public class DirectoryHandler extends RecursiveAction {
     protected void compute() {
         File[] remainder = splitLargeDirectory();
         analizeFiles(remainder);
-        fastTasks.forEach(ForkJoinTask::join);
+        runningTasks.remove(this);
     }
 
     protected void analizeFiles(File[] files) {
@@ -88,22 +90,25 @@ public class DirectoryHandler extends RecursiveAction {
     }
 
     protected void split(File largeFile) {
-        QUEUE_EX_MESSAGES.offer(resProvider.getStrFromMessagesBundle("bigFile") +
-                "\t" + largeFile);
+//        QUEUE_EX_MESSAGES.offer(resProvider.getStrFromMessagesBundle("bigFile") +
+//                "\t" + largeFile);
         DirectoryHandler longTask = new DirectoryHandlerSoloThread(largeFile,
                 HASH_ALGORITHM,
                 QUEUE_FILE_AND_CHECKSUM,
                 QUEUE_EX_MESSAGES);
-        longTasks.add(longTask);
-        longTask.fork();
+        forkAndRegistate(longTask);
     }
     protected void split(File[] files) {
         DirectoryHandler fastTask = new DirectoryHandler(files,
                 HASH_ALGORITHM,
                 QUEUE_FILE_AND_CHECKSUM,
                 QUEUE_EX_MESSAGES);
-        fastTasks.add(fastTask);
-        fastTask.fork();
+        forkAndRegistate(fastTask);
+    }
+
+    private void forkAndRegistate(DirectoryHandler directoryHandler) {
+        runningTasks.add(directoryHandler);
+        directoryHandler.fork();
     }
 
     protected void processFile(File file) {
@@ -145,7 +150,7 @@ public class DirectoryHandler extends RecursiveAction {
         return Arrays.copyOfRange(FILES_TO_HANDLE, THRESHOLD * tasksNumber, FILES_TO_HANDLE.length);
     }
 
-    public static void joinLongTasks() {
-        longTasks.forEach(DirectoryHandler::join);
+    public static void joinRunningTasks() {
+        runningTasks.forEach(DirectoryHandler::join);
     }
 }

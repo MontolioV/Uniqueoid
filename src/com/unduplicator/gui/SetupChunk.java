@@ -224,7 +224,11 @@ public class SetupChunk extends AbstractGUIChunk {
             String tmp = showDirLabel.getText();
             showDirLabel.setText(tmp + file.toString() + "\n");
             chosenFiles.add(file);
-            GlobalFiles.getInstance().setLastVisitedDir(file.getParentFile());
+            if (file.isDirectory()) {
+                GlobalFiles.getInstance().setLastVisitedDir(file);
+            } else {
+                GlobalFiles.getInstance().setLastVisitedDir(file.getParentFile());
+            }
             canStart = true;
             refreshState();
         }

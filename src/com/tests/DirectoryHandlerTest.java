@@ -32,6 +32,7 @@ public class DirectoryHandlerTest {
         ForkJoinPool fjPool = new ForkJoinPool();
 
         fjPool.invoke(dirHandler);
+        DirectoryHandler.joinRunningTasks();
 
         assertEquals(7, queueFilesChSs.size() + queueExMessages.size());
     }

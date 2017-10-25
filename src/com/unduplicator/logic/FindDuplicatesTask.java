@@ -121,7 +121,7 @@ public class FindDuplicatesTask extends Task<Map<String, Set<File>>> {
                 e.printStackTrace();
                 updateMessage(e.toString() + "\n");
             }
-            DirectoryHandler.joinLongTasks();
+            DirectoryHandler.joinRunningTasks();
         });
 
         fjThread.start();
