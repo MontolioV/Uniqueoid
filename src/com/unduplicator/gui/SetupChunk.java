@@ -3,6 +3,7 @@ package com.unduplicator.gui;
 import com.unduplicator.GlobalFiles;
 import com.unduplicator.ResourcesProvider;
 import com.unduplicator.logic.FindDuplicatesTask;
+import com.unduplicator.logic.FindDuplicatesTaskSoloThread;
 import javafx.collections.FXCollections;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -10,10 +11,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
-import javafx.scene.control.Button;
-import javafx.scene.control.ComboBox;
-import javafx.scene.control.Label;
-import javafx.scene.control.Separator;
+import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
@@ -40,6 +38,8 @@ public class SetupChunk extends AbstractGUIChunk {
     private List<File> chosenFiles = new ArrayList<>();
     private String chosenAlgorithm = "SHA-256";
 
+    private CheckBox parallelismChBox = new CheckBox();
+
     private Button addDirectoryButton = new Button();
     private Button addFileButton = new Button();
     private Button clearDirsButton = new Button();
@@ -61,6 +61,7 @@ public class SetupChunk extends AbstractGUIChunk {
      */
     @Override
     public void updateLocaleContent() {
+        parallelismChBox.setText(resProvider.getStrFromGUIBundle("parallelismChBox"));
         startButton.setText(resProvider.getStrFromGUIBundle("startButton"));
         addToResultsButton.setText((resProvider.getStrFromGUIBundle("addToResultsButton")));
         addDirectoryButton.setText(resProvider.getStrFromGUIBundle("addDirectoryButton"));
@@ -116,6 +117,8 @@ public class SetupChunk extends AbstractGUIChunk {
         algorithmCB.setOnAction(event -> chosenAlgorithm = algorithmCB.getValue());
         algorithmCB.getSelectionModel().selectLast();
 
+        parallelismChBox.setSelected(true);
+
         addDirectoryButton.setOnAction(event -> {
             DirectoryChooser dirChooser = new DirectoryChooser();
             dirChooser.setInitialDirectory(GlobalFiles.getInstance().getLastVisitedDir());
@@ -144,6 +147,7 @@ public class SetupChunk extends AbstractGUIChunk {
         buttonsPane.getChildren().addAll(
                 algorithmLabel,
                 algorithmCB,
+                parallelismChBox,
                 new Separator(),
                 addDirectoryButton,
                 addFileButton,
@@ -213,10 +217,18 @@ public class SetupChunk extends AbstractGUIChunk {
     }
 
     protected FindDuplicatesTask getStartTask() {
-        return new FindDuplicatesTask(chosenFiles, chosenAlgorithm);
+        if (parallelismChBox.isSelected()) {
+            return new FindDuplicatesTask(chosenFiles, chosenAlgorithm);
+        } else {
+            return new FindDuplicatesTaskSoloThread(chosenFiles, chosenAlgorithm);
+        }
     }
     protected FindDuplicatesTask getAddToResultsTask(Map<String, Set<File>> previousResult) {
-        return new FindDuplicatesTask(chosenFiles, chosenAlgorithm, previousResult);
+        if (parallelismChBox.isSelected()) {
+            return new FindDuplicatesTask(chosenFiles, chosenAlgorithm, previousResult);
+        } else {
+            return new FindDuplicatesTaskSoloThread(chosenFiles, chosenAlgorithm, previousResult);
+        }
     }
 
     private void showSelectedFile(File file) {

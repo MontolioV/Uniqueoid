@@ -91,9 +91,14 @@ public class RuntimeStatusChunk extends AbstractGUIChunk {
     private BorderPane makePane() {
         progressBar.setMaxWidth(Double.MAX_VALUE);
         poolStatusLabel.setMaxWidth(Double.MAX_VALUE);
+        poolStatusLabel.setAlignment(Pos.CENTER);
         messagesTA.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
         messagesTA.setEditable(false);
         messagesTA.setWrapText(true);
+
+        progressBar.managedProperty().bind(progressBar.visibleProperty());
+        poolStatusLabel.managedProperty().bind(progressBar.visibleProperty());
+        poolStatusLabel.visibleProperty().bind(progressBar.visibleProperty());
 
         toSetupBut.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
         toResultBut.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
