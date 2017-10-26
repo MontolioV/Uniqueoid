@@ -151,6 +151,10 @@ public class DirectoryHandler extends RecursiveAction {
     }
 
     public static void joinRunningTasks() {
-        runningTasks.forEach(DirectoryHandler::join);
+        try {
+            runningTasks.forEach(DirectoryHandler::join);
+        } finally {
+            runningTasks = Collections.newSetFromMap(new ConcurrentHashMap<>());
+        }
     }
 }
