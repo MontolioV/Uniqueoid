@@ -150,9 +150,11 @@ public class DirectoryHandler extends RecursiveAction {
         return Arrays.copyOfRange(FILES_TO_HANDLE, THRESHOLD * tasksNumber, FILES_TO_HANDLE.length);
     }
 
-    public static void joinRunningTasks() {
+    public static void joinRunningTasks() throws Exception{
         try {
-            runningTasks.forEach(DirectoryHandler::join);
+            while (!runningTasks.isEmpty()) {
+                runningTasks.forEach(DirectoryHandler::join);
+            }
         } finally {
             runningTasks = Collections.newSetFromMap(new ConcurrentHashMap<>());
         }

@@ -11,7 +11,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ForkJoinPool;
 
 /**
@@ -91,8 +90,8 @@ public class FindDuplicatesTask extends Task<Map<String, Set<File>>> {
         if (dir.isDirectory()) {
             int result = 0;
             if (dir.listFiles() == null) {
-                updateMessage(resProvider.getStrFromMessagesBundle("countFail") +
-                        "\t" + dir.toString());
+                queueExMessages.offer(resProvider.getStrFromMessagesBundle("countFail") +
+                        "\t" + dir.toString() + "\n");
             } else {
                 for (File file : dir.listFiles()) {
                     if (file.isDirectory()) {
@@ -117,11 +116,11 @@ public class FindDuplicatesTask extends Task<Map<String, Set<File>>> {
             fjPool.execute(directoryHandler);
             try {
                 directoryHandler.get();
-            } catch (InterruptedException | ExecutionException e) {
+                DirectoryHandler.joinRunningTasks();
+            } catch (Exception e) {
                 e.printStackTrace();
-                updateMessage(e.toString() + "\n");
+                queueExMessages.offer(e.toString() + "\n");
             }
-            DirectoryHandler.joinRunningTasks();
         });
 
         fjThread.start();

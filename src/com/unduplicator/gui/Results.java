@@ -74,13 +74,18 @@ public class Results {
         }
 
         processedFilesMap.forEach((s, files) ->{
-            HashSet<File> updatedSet = new HashSet<>();
+            HashSet<File> updatedSet = null;
             for (File file : files) {
-                if (file.exists()) {
-                    updatedSet.add(file);
+                if (!file.exists()) {
+                    if (updatedSet == null) {
+                        updatedSet = new HashSet<>(files);
+                    }
+                    updatedSet.remove(file);
                 }
             }
-            processedFilesMap.replace(s, updatedSet);
+            if (updatedSet != null) {
+                processedFilesMap.replace(s, updatedSet);
+            }
         });
         makeDuplicateSet();
         chunkManager.updateDeleterChunk();
@@ -239,5 +244,18 @@ public class Results {
         if (filesThatRemains.containsKey(file)) {
             unselectByChecksum(checksum);
         }
+    }
+
+    protected int[] getStatistics(String checksum) {
+        int[] result = new int[4];
+        result[0] = duplicateChSumSet.size();
+        if (checksum == null || checksum.equals("")) {
+            result[1] = 0;
+        } else {
+            result[1] = processedFilesMap.get(checksum).size();
+        }
+        result[2] = filesThatRemains.size();
+        result[3] = filesToDelete.size();
+        return result;
     }
 }

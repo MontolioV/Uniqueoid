@@ -160,6 +160,10 @@ public class ChunkManager {
     protected void ignoreDuplicatesFromRoot(String rootString) {
         results.ignoreDuplicatesFromRoot(rootString);
     }
+    protected int[] getStatistics(String checksum) {
+        return results.getStatistics(checksum);
+    }
+
 
     //Setup chunk features
     protected FindDuplicatesTask getAddToResultsTask(Map<String, Set<File>> previousResult) {
