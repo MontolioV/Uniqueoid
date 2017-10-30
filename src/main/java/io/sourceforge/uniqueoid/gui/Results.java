@@ -1,6 +1,5 @@
 package io.sourceforge.uniqueoid.gui;
 
-import io.sourceforge.uniqueoid.ResourcesProvider;
 import javafx.concurrent.Task;
 
 import java.io.*;
@@ -16,7 +15,6 @@ import java.util.function.BiPredicate;
  * <p>Created by MontolioV on 30.08.17.
  */
 public class Results {
-    private ResourcesProvider resProvider = ResourcesProvider.getInstance();
     private ChunkManager chunkManager;
 
     private AtomicLong updateTimeStamp = new AtomicLong();
@@ -239,11 +237,12 @@ public class Results {
     private void removeFromResults(String checksum, File file) {
         if (file == null) return;
 
-        processedFilesMap.get(checksum).remove(file);
         filesToDelete.remove(file);
         if (filesThatRemains.containsKey(file)) {
             unselectByChecksum(checksum);
         }
+
+        processedFilesMap.get(checksum).remove(file);   //it must be the last action
     }
 
     protected int[] getStatistics(String checksum) {
