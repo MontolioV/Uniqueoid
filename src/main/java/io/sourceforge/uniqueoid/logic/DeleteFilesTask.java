@@ -1,129 +1,75 @@
 package io.sourceforge.uniqueoid.logic;
 
-import io.sourceforge.uniqueoid.ResourcesProvider;
 import javafx.concurrent.Task;
 
 import java.io.File;
-import java.nio.file.NoSuchFileException;
-import java.util.*;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.function.ToIntFunction;
 
 /**
  * <p>Created by MontolioV on 12.07.17.
  */
-public class DeleteFilesTask extends Task<List<File>> {
-    private List<File> fileList;
+public class DeleteFilesTask extends Task<Set<File>> {
+    private Set<File> taskFiles;
     private Set<File> dirsToDelete = new HashSet<>();
-    private List<File> notDeletedFileList = new ArrayList<>();
-    private double progress = 0;
-    private ResourcesProvider resProvider = ResourcesProvider.getInstance();
-
+    private Set<File> reportSet = new HashSet<>();
 
     /**
      * Creates a new Task.
      */
-    public DeleteFilesTask(List<File> fileList) {
+    public DeleteFilesTask(Set<File> fileList) {
         super();
-        this.fileList = fileList;
+        this.taskFiles = fileList;
     }
 
     @Override
-    protected List<File> call() throws Exception {
-        deleteFiles();
-        markEmptyDirs();
-        deleteEmptyDirs();
-        return notDeletedFileList;
+    protected Set<File> call() throws Exception {
+        riseStep(taskFiles);
+        return reportSet;
     }
 
-    private void deleteFiles() {
-        double counter = 0;
+    private void riseStep(Set<File> files) {
+        if (files == null || isCancelled()) return;
 
-        for (File file : fileList) {
-            if (isCancelled()) return;
+        files.forEach(this::extract);
+        riseStep(deleteTheDeepest());
+    }
 
-            if (file.isDirectory()) {
-                cleanDir(file);
-            } else {
-                deleteFile(file);
-            }
-            progress += 0.5 * (++counter / fileList.size());
-            updateProgress(progress, 1);
+    private void extract(File file) {
+        if (file.exists()) {
+            dirsToDelete.add(file);
+        } else if (file.getParentFile() != null) {
+            dirsToDelete.add(file.getParentFile());
         }
     }
 
-    private void cleanDir(File dir) {
-        dirsToDelete.add(dir);
-        for (File file : dir.listFiles()) {
-            if (file.isDirectory()) {
-                cleanDir(file);
-            } else {
-                deleteFile(file);
-            }
-        }
-    }
+    //Avoiding situation, when dir can't be deleted cause it contains another empty dir
+    private Set<File> deleteTheDeepest() {
+        if (dirsToDelete.isEmpty()) return null;
 
-    private void deleteFile(File file) {
-        boolean deleted = file.delete();
-        if (!deleted) {
-            notDeletedFileList.add(file);
-        }
-    }
+        Set<File> deleted = new HashSet<>();
+        Set<File> notDeleted = new HashSet<>();
 
-    private void markEmptyDirs() throws NoSuchFileException {
-        double counter = 0;
-        for (File file : fileList) {
-            if (isCancelled()) return;
+        ToIntFunction<File> getPathDepth = file -> file.toPath().toAbsolutePath().getNameCount();
+        Comparator<File> pathDepthComp = Comparator.comparingInt(getPathDepth::applyAsInt);
 
-            if (file.getParentFile() == null) {
-                throw new NoSuchFileException(
-                        resProvider.getStrFromExceptionBundle("hasNoParent") +
-                                "\t" + file.toString());
-            } else {
-                addEmptyDirToList(file.getParentFile());
-            }
-            progress += 0.25 * (++counter / fileList.size());
-            updateProgress(progress, 1);
-        }
-    }
+        int maxDepth = getPathDepth.applyAsInt(dirsToDelete.stream().max(pathDepthComp).get());
 
-    private boolean addEmptyDirToList(File dir) {
-        if (!dir.isDirectory()) {
-            return false;
-        }
-        if (dir.listFiles().length == 0) {
-            dirsToDelete.add(dir);
-            return true;
-        } else {
-            boolean canBeDeleted = true;
-            for (File file : dir.listFiles()) {
-                if (!addEmptyDirToList(file)) {
-                    canBeDeleted = false;
-                    break;
-                }
-            }
-            if (canBeDeleted) {
-                dirsToDelete.add(dir);
-            }
-            return canBeDeleted;
-        }
-    }
-
-    private void deleteEmptyDirs() {
-        if (isCancelled()) return;
-
-        //Sort dirs to avoid situation, when dir can't be deleted cause it contains another empty dir
-        Comparator<File> pathDepthComp = Comparator.comparingInt(f -> f.toPath().toAbsolutePath().getNameCount());
-        ArrayList<File> dirsToDeleteAL = new ArrayList<>(dirsToDelete);
-        dirsToDeleteAL.sort(pathDepthComp.reversed());
-
-        double counter = 0;
-        for (File file : dirsToDeleteAL) {
-            if (isCancelled()) return;
-
-            if (file.exists() && !file.delete()) {
-                notDeletedFileList.add(file);
-            }
-            progress += 0.25 * (++counter / dirsToDeleteAL.size());
-            updateProgress(progress, 1);
-        }
+        dirsToDelete.stream()
+                .filter(f -> getPathDepth.applyAsInt(f) == maxDepth)
+                .forEach(file -> {
+                    if (file.delete()) {
+                        deleted.add(file);
+                    } else if (file.exists()) {
+                        notDeleted.add(file);
+                    }
+                });
+        dirsToDelete.removeAll(deleted);
+        dirsToDelete.removeAll(notDeleted);
+        notDeleted.stream().filter(taskFiles::contains).forEach(reportSet::add);
+        updateProgress(1 / ((double) 1 + dirsToDelete.size()), 1);
+        return deleted;
     }
 }

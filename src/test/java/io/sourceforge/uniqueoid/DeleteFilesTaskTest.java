@@ -8,7 +8,8 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.FileWriter;
-import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 
 import static io.sourceforge.uniqueoid.TestMatEnum.ROOT_CONTROL;
 import static org.junit.Assert.*;
@@ -37,7 +38,7 @@ public class DeleteFilesTaskTest {
         assertTrue(mainDir.exists());
         assertTrue(rootDir.exists());
 
-        ArrayList<File> fileAL = new ArrayList<>();
+        Set<File> fileAL = new HashSet<>();
         fileAL.add(new File(mainDir, "1.txt"));
         fileAL.add(new File(brch1, "1.txt"));
         fileAL.add(new File(brch1, "2.txt"));
@@ -61,6 +62,7 @@ public class DeleteFilesTaskTest {
 
         assertFalse(mainDir.exists());
         assertTrue(rootDir.exists());
+        assertTrue(rootDir.getParentFile().exists());
     }
 
 }

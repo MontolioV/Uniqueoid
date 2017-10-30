@@ -256,7 +256,7 @@ public class DeleterChunk extends AbstractGUIChunk {
                 return new TextArea(sj.toString());
             };
 
-            DeleteFilesTask deletionTask = new DeleteFilesTask(new ArrayList<>(filesToDelete));
+            DeleteFilesTask deletionTask = new DeleteFilesTask(filesToDelete);
 
             Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
             alert.setTitle(resProvider.getStrFromGUIBundle("delConformAlertTitle"));
@@ -276,7 +276,7 @@ public class DeleterChunk extends AbstractGUIChunk {
                                 Alert reportAlert = new Alert(Alert.AlertType.INFORMATION);
 
                                 try {
-                                    List<File> notDeletedList = deletionTask.get();
+                                    Set<File> notDeletedList = deletionTask.get();
                                     if (!notDeletedList.isEmpty()) {
                                         reportAlert.setHeaderText(resProvider.getStrFromGUIBundle("reportAlertHeaderFail"));
                                         reportAlert.getDialogPane().setExpandableContent(
