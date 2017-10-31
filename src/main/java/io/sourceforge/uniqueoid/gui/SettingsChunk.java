@@ -3,16 +3,21 @@ package io.sourceforge.uniqueoid.gui;
 import io.sourceforge.uniqueoid.GlobalFiles;
 import io.sourceforge.uniqueoid.ResourcesProvider;
 import io.sourceforge.uniqueoid.logic.FindTaskSettings;
+import javafx.beans.property.StringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.control.ComboBox;
-import javafx.scene.control.ListView;
+import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
 import java.io.*;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
+import java.text.ParseException;
 import java.util.function.Function;
 
 /**
@@ -25,10 +30,16 @@ public class SettingsChunk extends AbstractGUIChunk{
     private File saveFile = GlobalFiles.getInstance().getTasksSettingsFile();
     private FindTaskSettings findTaskSettings;
 
+    private ObservableList<BytePower> bytePowers = FXCollections.observableArrayList(BytePower.values());
+
+    private Label fileSizeRestrictionsLabel = new Label();
+    private Label minSizeLabel = new Label();
+    private Label maxSizeLabel = new Label();
+
     public SettingsChunk(ChunkManager chunkManager) {
         this.chunkManager = chunkManager;
         load();
-        setSelfNode();
+        setSelfNode(makeSelfNode());
     }
 
     /**
@@ -36,7 +47,10 @@ public class SettingsChunk extends AbstractGUIChunk{
      */
     @Override
     public void updateLocaleContent() {
-
+        bytePowers.forEach(BytePower::updateLocaleContent);
+        fileSizeRestrictionsLabel.setText(resProvider.getStrFromGUIBundle("fileSizeRestrictions"));
+        minSizeLabel.setText(resProvider.getStrFromGUIBundle("minSizeLabel"));
+        maxSizeLabel.setText(resProvider.getStrFromGUIBundle("maxSizeLabel"));
     }
 
     private void save() {
@@ -63,38 +77,48 @@ public class SettingsChunk extends AbstractGUIChunk{
     }
 
     private Node makeSelfNode() {
-        ListView<String> listView = new ListView<>();
-        listView.
+        return makeFileDelimiterNode();
     }
 
     private Node makeFileDelimiterNode() {
-        BytePower minClosest = findClosestGrage(findTaskSettings.getMinFileSize());
-        BytePower maxClosest = findClosestGrage(findTaskSettings.getMaxFileSize());
-        double minInitial = (findTaskSettings.getMinFileSize() / (minClosest.getModifier() * 100d)) / 100;
-        double maxInitial = (findTaskSettings.getMaxFileSize() / (maxClosest.getModifier() * 100d)) / 100;
+        NumberFormat numberFormat = new DecimalFormat();
 
-        ObservableList<BytePower> bytePowers = FXCollections.observableArrayList(BytePower.values());
+        BytePower minClosest = findClosestGrade(findTaskSettings.getMinFileSize());
+        BytePower maxClosest = findClosestGrade(findTaskSettings.getMaxFileSize());
+
         ComboBox<BytePower> minMeasureCB = new ComboBox<>(bytePowers);
         ComboBox<BytePower> maxMeasureCB = new ComboBox<>(bytePowers);
         TextField minSizeTF = new TextField();
         TextField maxSizeTF = new TextField();
 
         Function<TextField, ChangeListener<BytePower>> comboBoxListenerProvider = textField -> (observable, oldValue, newValue) -> {
-            double bytes = Double.parseDouble(textField.getText()) * oldValue.getModifier();
-            textField.setText(String.format("%.2f", bytes / newValue.getModifier()));
+            try {
+                double tfValue = numberFormat.parse(textField.getText()).doubleValue();
+                textField.setText(String.format("%,.2f", tfValue * ((double) oldValue.getModifier() / newValue.getModifier())));
+            } catch (ParseException e) {
+                e.printStackTrace();
+            }
         };
         Function<ComboBox<BytePower>, ChangeListener<String>> textFieldListenerProvider = comboBox -> (observable, oldValue, newValue) -> {
-            TextField tf = (TextField) observable;
+            StringProperty stringProperty = (StringProperty) observable;
+
             try {
-                double d = Double.parseDouble(newValue);
+                double d = numberFormat.parse(newValue).doubleValue();
                 if (d > (Long.MAX_VALUE / comboBox.valueProperty().get().getModifier())) {
                     d = Long.MAX_VALUE / comboBox.valueProperty().get().getModifier();
                 } else if (d < 0) {
                     d = 0;
                 }
-                tf.setText(String.format("%.2f", d));
-            } catch (NumberFormatException e) {
-                tf.setText(oldValue);
+                String formattedValue = String.format("%,.2f", d);
+                if (d == (long) d) {
+                    formattedValue = String.format("%,d", (long) d);
+                }
+                if (!newValue.equals(formattedValue)) {
+                    stringProperty.setValue(formattedValue);
+                }
+            } catch (ParseException e) {
+                e.printStackTrace();
+                stringProperty.setValue(oldValue);
             }
         };
 
@@ -106,14 +130,18 @@ public class SettingsChunk extends AbstractGUIChunk{
         minMeasureCB.valueProperty().addListener(comboBoxListenerProvider.apply(minSizeTF));
         maxMeasureCB.valueProperty().addListener(comboBoxListenerProvider.apply(maxSizeTF));
 
+        minSizeTF.setText(String.valueOf(findTaskSettings.getMinFileSize()));
+        maxSizeTF.setText(String.valueOf(findTaskSettings.getMaxFileSize()));
 
-        VBox result = new VBox();
+        VBox labelsVBox = new VBox(5, minSizeLabel, maxSizeLabel);
+        VBox tfVBox = new VBox(5, minSizeTF, maxSizeTF);
+        VBox cbVBox = new VBox(5, minMeasureCB, maxMeasureCB);
+        HBox hBox = new HBox(10, labelsVBox, tfVBox, cbVBox);
+        VBox result = new VBox(10, fileSizeRestrictionsLabel, hBox);
         return result;
     }
 
-
-
-    private BytePower findClosestGrage(long value) {
+    private BytePower findClosestGrade(long value) {
         BytePower[] bytePowers = BytePower.values();
         for (int i = bytePowers.length - 1; i > 0; i--) {
             if ((value / bytePowers[i].getModifier()) > 0) {

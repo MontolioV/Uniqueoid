@@ -11,10 +11,16 @@ public enum BytePower {
     M_BYTES((long) Math.pow(10, 6), 2),
     G_BYTES((long) Math.pow(10, 9), 3),
     T_BYTES((long) Math.pow(10, 12), 4),
-    KI_BYTES((long) Math.pow(2, 10), 5),
-    MI_BYTES((long) Math.pow(2, 20), 6),
-    GI_BYTES((long) Math.pow(2, 30), 7),
-    TI_BYTES((long) Math.pow(2, 40), 8),;
+    P_BYTES((long) Math.pow(10, 15), 5),
+    E_BYTES((long) Math.pow(10, 18), 6),
+    KI_BYTES((long) Math.pow(2, 10), 7),
+    MI_BYTES((long) Math.pow(2, 20), 8),
+    GI_BYTES((long) Math.pow(2, 30), 9),
+    TI_BYTES((long) Math.pow(2, 40), 10),
+    PI_BYTES((long) Math.pow(2, 50), 11),
+    EI_BYTES((long) Math.pow(2, 60), 12),;
+
+
 
     private long modifier;
     private int resIndex;
