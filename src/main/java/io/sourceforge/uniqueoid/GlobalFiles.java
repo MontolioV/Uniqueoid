@@ -16,6 +16,7 @@ public class GlobalFiles {
     private File localeFile;
     private File settingsFile;
     private File logFile;
+    private File tasksSettingsFile;
 
     public static GlobalFiles getInstance() {
         return ourInstance;
@@ -30,6 +31,7 @@ public class GlobalFiles {
         localeFile = new File(settingsDir, "/locale.ser");
         settingsFile = new File(settingsDir, "/settings.txt");
         logFile = new File(appDir, "/log.txt");
+        tasksSettingsFile =new File(settingsDir, "/tasks_settings.ser");
     }
 
     private File makeRootFile() {
@@ -70,5 +72,9 @@ public class GlobalFiles {
 
     public File getLogFile() {
         return logFile;
+    }
+
+    public File getTasksSettingsFile() {
+        return tasksSettingsFile;
     }
 }
