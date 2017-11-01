@@ -7,10 +7,11 @@ import javafx.beans.property.StringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.geometry.Insets;
+import javafx.geometry.Orientation;
 import javafx.scene.Node;
-import javafx.scene.control.ComboBox;
-import javafx.scene.control.Label;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
@@ -19,6 +20,8 @@ import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.text.ParseException;
 import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.function.ToDoubleFunction;
 
 /**
  * <p>Created by MontolioV on 31.10.17.
@@ -30,16 +33,28 @@ public class SettingsChunk extends AbstractGUIChunk{
     private File saveFile = GlobalFiles.getInstance().getTasksSettingsFile();
     private FindTaskSettings findTaskSettings;
 
+    private Supplier<Long> minFileSizeSupp;
+    private Supplier<Long> maxFileSizeSupp;
+    private Supplier<Long> bigFileSizeSupp;
+    private Supplier<Integer> maxHashBufferSizeSupp;
+
+    private ComboBox<String> algorithmCB;
+    private CheckBox isParallelChBox = new CheckBox();
+    private Spinner<Integer> parallelismSpinner;
+
     private ObservableList<BytePower> bytePowers = FXCollections.observableArrayList(BytePower.values());
 
     private Label fileSizeRestrictionsLabel = new Label();
     private Label minSizeLabel = new Label();
     private Label maxSizeLabel = new Label();
+    private Label bigFileSizeLabel = new Label();
+    private Label maxBufferSizeLabel = new Label();
 
     public SettingsChunk(ChunkManager chunkManager) {
         this.chunkManager = chunkManager;
         load();
         setSelfNode(makeSelfNode());
+        updateLocaleContent();
     }
 
     /**
@@ -47,13 +62,24 @@ public class SettingsChunk extends AbstractGUIChunk{
      */
     @Override
     public void updateLocaleContent() {
+        isParallelChBox.setText(resProvider.getStrFromGUIBundle("parallelismChBox"));
         bytePowers.forEach(BytePower::updateLocaleContent);
         fileSizeRestrictionsLabel.setText(resProvider.getStrFromGUIBundle("fileSizeRestrictions"));
         minSizeLabel.setText(resProvider.getStrFromGUIBundle("minSizeLabel"));
         maxSizeLabel.setText(resProvider.getStrFromGUIBundle("maxSizeLabel"));
+        bigFileSizeLabel.setText(resProvider.getStrFromGUIBundle("bigFileSizeLabel"));
+        maxBufferSizeLabel.setText(resProvider.getStrFromGUIBundle("maxBufferSizeLabel"));
     }
 
     private void save() {
+        findTaskSettings = new FindTaskSettings(
+                algorithmCB.getSelectionModel().getSelectedItem(),
+                isParallelChBox.isSelected(),
+                parallelismSpinner.getValue(),
+                bigFileSizeSupp.get(),
+                maxHashBufferSizeSupp.get(),
+                maxFileSizeSupp.get(),
+                minFileSizeSupp.get());
         try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(saveFile))){
             oos.writeObject(findTaskSettings);
         } catch (IOException e) {
@@ -77,24 +103,125 @@ public class SettingsChunk extends AbstractGUIChunk{
     }
 
     private Node makeSelfNode() {
-        return makeFileDelimiterNode();
+        FlowPane flowPane = new FlowPane(10, 10,
+                makeAlgorithmAndParallelismSettingsNode(),
+                makeBigFileAndBufferSettingsNode(),
+                makeFileDelimiterSettingsNode());
+        flowPane.setPadding(new Insets(10));
+        flowPane.setOrientation(Orientation.HORIZONTAL);
+
+        return flowPane;
     }
 
-    private Node makeFileDelimiterNode() {
+    private Node makeAlgorithmAndParallelismSettingsNode() {
+        algorithmCB = new ComboBox<>(FXCollections.observableArrayList(
+                "MD5", "SHA-1", "SHA-256"));
+        algorithmCB.getSelectionModel().select(findTaskSettings.getHashAlgorithm());
+        algorithmCB.setMaxWidth(Double.MAX_VALUE);
+
+        isParallelChBox.setSelected(findTaskSettings.isParallel());
+
+        parallelismSpinner = new Spinner<>(1, 1024, findTaskSettings.getParallelism());
+
+        VBox result = new VBox(5,
+                algorithmCB,
+                isParallelChBox,
+                parallelismSpinner);
+        return result;
+    }
+    private Node makeBigFileAndBufferSettingsNode() {
         NumberFormat numberFormat = new DecimalFormat();
 
-        BytePower minClosest = findClosestGrade(findTaskSettings.getMinFileSize());
-        BytePower maxClosest = findClosestGrade(findTaskSettings.getMaxFileSize());
+        ComboBox<BytePower> bigFileSizeCB = new ComboBox<>(bytePowers);
+        ComboBox<BytePower> maxBufferSizeCB = new ComboBox<>(bytePowers);
+        TextField bigFileTF = new TextField();
+        TextField maxBufferTF = new TextField();
+
+        bigFileSizeSupp = () -> {
+            try {
+                return (long) (numberFormat.parse(bigFileTF.getText()).doubleValue() * bigFileSizeCB.getSelectionModel().getSelectedItem().getModifier());
+            } catch (ParseException e) {
+                String message = resProvider.getStrFromExceptionBundle("illegalBigFileSize");
+                chunkManager.showException(new IllegalArgumentException(message, e));
+                return 10 * BytePower.MI_BYTES.getModifier();
+            }
+        };
+        maxHashBufferSizeSupp = () -> {
+            try {
+                return (int) (numberFormat.parse(maxBufferTF.getText()).doubleValue() * maxBufferSizeCB.getSelectionModel().getSelectedItem().getModifier());
+            } catch (ParseException e) {
+                String message = resProvider.getStrFromExceptionBundle("illegalHashBufferSize");
+                chunkManager.showException(new IllegalArgumentException(message, e));
+                return (int) (10 * BytePower.MI_BYTES.getModifier());
+            }
+        };
+
+        bindByteInputElements_0ToLongMax(bigFileTF, bigFileSizeCB);
+        bindByteInputElements_0ToIntMax(maxBufferTF, maxBufferSizeCB);
+
+        bigFileTF.setText(String.valueOf(findTaskSettings.getBigFileSize()));
+        maxBufferTF.setText(String.valueOf(findTaskSettings.getMaxBufferSize()));
+
+        Node bigFileSizeNode = makeByteInputElementsNode(bigFileTF, bigFileSizeCB, bigFileSizeLabel);
+        Node maxBufferSizeNode = makeByteInputElementsNode(maxBufferTF, maxBufferSizeCB, maxBufferSizeLabel);
+
+        VBox result = new VBox(5, bigFileSizeNode, maxBufferSizeNode);
+        return result;
+    }
+    private Node makeFileDelimiterSettingsNode() {
+        NumberFormat numberFormat = new DecimalFormat();
 
         ComboBox<BytePower> minMeasureCB = new ComboBox<>(bytePowers);
         ComboBox<BytePower> maxMeasureCB = new ComboBox<>(bytePowers);
         TextField minSizeTF = new TextField();
         TextField maxSizeTF = new TextField();
 
+        minFileSizeSupp = () -> {
+            try {
+                return (long) (numberFormat.parse(minSizeTF.getText()).doubleValue() * minMeasureCB.getSelectionModel().getSelectedItem().getModifier());
+            } catch (ParseException e) {
+                String message = resProvider.getStrFromExceptionBundle("illegalMinFileSize");
+                chunkManager.showException(new IllegalArgumentException(message, e));
+                return 0L;
+            }
+        };
+        maxFileSizeSupp = () -> {
+            try {
+                return (long) (numberFormat.parse(maxSizeTF.getText()).doubleValue() * maxMeasureCB.getSelectionModel().getSelectedItem().getModifier());
+            } catch (ParseException e) {
+                String message = resProvider.getStrFromExceptionBundle("illegalMaxFileSize");
+                chunkManager.showException(new IllegalArgumentException(message, e));
+                return Long.MAX_VALUE;
+            }
+        };
+
+        bindByteInputElements_0ToLongMax(minSizeTF, minMeasureCB);
+        bindByteInputElements_0ToLongMax(maxSizeTF, maxMeasureCB);
+
+        minSizeTF.setText(String.valueOf(findTaskSettings.getMinFileSize()));
+        maxSizeTF.setText(String.valueOf(findTaskSettings.getMaxFileSize()));
+
+        Node minNode = makeByteInputElementsNode(minSizeTF, minMeasureCB, minSizeLabel);
+        Node maxNode = makeByteInputElementsNode(maxSizeTF, maxMeasureCB, maxSizeLabel);
+
+        VBox minMaxVBox = new VBox(5, minNode, maxNode);
+        return minMaxVBox;
+    }
+
+    private Node makeByteInputElementsNode(TextField textField, ComboBox<BytePower> comboBox, Label label) {
+        comboBox.getSelectionModel().select(BytePower.BYTES);
+        comboBox.setMaxHeight(Double.MAX_VALUE);
+        textField.setPrefWidth(200);
+        HBox hBox = new HBox(0, textField, comboBox);
+        VBox vBox = new VBox(3, label, hBox);
+        return vBox;
+    }
+    private void bindByteInputElements(TextField textFieldToBind, ComboBox<BytePower> comboBoxToBind, ToDoubleFunction<Double> limitFunc) {
+        NumberFormat numberFormat = new DecimalFormat();
         Function<TextField, ChangeListener<BytePower>> comboBoxListenerProvider = textField -> (observable, oldValue, newValue) -> {
             try {
                 double tfValue = numberFormat.parse(textField.getText()).doubleValue();
-                textField.setText(String.format("%,.2f", tfValue * ((double) oldValue.getModifier() / newValue.getModifier())));
+                textField.setText(String.format("%,f", tfValue * ((double) oldValue.getModifier() / newValue.getModifier())));
             } catch (ParseException e) {
                 e.printStackTrace();
             }
@@ -103,13 +230,8 @@ public class SettingsChunk extends AbstractGUIChunk{
             StringProperty stringProperty = (StringProperty) observable;
 
             try {
-                double d = numberFormat.parse(newValue).doubleValue();
-                if (d > (Long.MAX_VALUE / comboBox.valueProperty().get().getModifier())) {
-                    d = Long.MAX_VALUE / comboBox.valueProperty().get().getModifier();
-                } else if (d < 0) {
-                    d = 0;
-                }
-                String formattedValue = String.format("%,.2f", d);
+                double d = limitFunc.applyAsDouble(numberFormat.parse(newValue).doubleValue());
+                String formattedValue = String.format("%,f", d);
                 if (d == (long) d) {
                     formattedValue = String.format("%,d", (long) d);
                 }
@@ -122,32 +244,33 @@ public class SettingsChunk extends AbstractGUIChunk{
             }
         };
 
-        minSizeTF.textProperty().addListener(textFieldListenerProvider.apply(minMeasureCB));
-        maxSizeTF.textProperty().addListener(textFieldListenerProvider.apply(maxMeasureCB));
-
-        minMeasureCB.getSelectionModel().select(minClosest);
-        maxMeasureCB.getSelectionModel().select(maxClosest);
-        minMeasureCB.valueProperty().addListener(comboBoxListenerProvider.apply(minSizeTF));
-        maxMeasureCB.valueProperty().addListener(comboBoxListenerProvider.apply(maxSizeTF));
-
-        minSizeTF.setText(String.valueOf(findTaskSettings.getMinFileSize()));
-        maxSizeTF.setText(String.valueOf(findTaskSettings.getMaxFileSize()));
-
-        VBox labelsVBox = new VBox(5, minSizeLabel, maxSizeLabel);
-        VBox tfVBox = new VBox(5, minSizeTF, maxSizeTF);
-        VBox cbVBox = new VBox(5, minMeasureCB, maxMeasureCB);
-        HBox hBox = new HBox(10, labelsVBox, tfVBox, cbVBox);
-        VBox result = new VBox(10, fileSizeRestrictionsLabel, hBox);
-        return result;
+        textFieldToBind.textProperty().addListener(textFieldListenerProvider.apply(comboBoxToBind));
+        comboBoxToBind.valueProperty().addListener(comboBoxListenerProvider.apply(textFieldToBind));
     }
-
-    private BytePower findClosestGrade(long value) {
-        BytePower[] bytePowers = BytePower.values();
-        for (int i = bytePowers.length - 1; i > 0; i--) {
-            if ((value / bytePowers[i].getModifier()) > 0) {
-                return bytePowers[i];
+    private void bindByteInputElements_0ToLongMax(TextField textFieldToBind, ComboBox<BytePower> comboBoxToBind) {
+        ToDoubleFunction<Double> limitFunc = d -> {
+            double maxValue = ((double) Long.MAX_VALUE) / comboBoxToBind.valueProperty().get().getModifier();
+            if (d > maxValue) {
+                return maxValue;
+            } else if (d < 0) {
+                return 0;
+            } else {
+                return d;
             }
-        }
-        return bytePowers[0];
+        };
+        bindByteInputElements(textFieldToBind, comboBoxToBind, limitFunc);
+    }
+    private void bindByteInputElements_0ToIntMax(TextField textFieldToBind, ComboBox<BytePower> comboBoxToBind) {
+        ToDoubleFunction<Double> limitFunc = d -> {
+            double maxValue = ((double) Integer.MAX_VALUE) / comboBoxToBind.valueProperty().get().getModifier();
+            if (d > maxValue) {
+                return maxValue;
+            } else if (d < 0) {
+                return 0;
+            } else {
+                return d;
+            }
+        };
+        bindByteInputElements(textFieldToBind, comboBoxToBind, limitFunc);
     }
 }

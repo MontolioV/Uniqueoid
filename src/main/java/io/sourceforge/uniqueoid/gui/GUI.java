@@ -120,7 +120,7 @@ public class GUI extends Application{
         primaryStage.setTitle("Uniqueoid");
         primaryStage.setFullScreen(isFullScreen);
         primaryStage.show();
-        appPane.setBottom(new SettingsChunk(chunkManager).getAsNode());
+        appPane.setLeft(new SettingsChunk(chunkManager).getAsNode());
 
     }
 
