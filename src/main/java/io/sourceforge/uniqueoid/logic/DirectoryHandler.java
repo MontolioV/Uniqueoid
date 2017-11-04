@@ -25,26 +25,27 @@ public class DirectoryHandler extends RecursiveAction {
     private final CheckSumMaker CHECKSUM_MAKER;
     private final ConcurrentLinkedQueue<FileAndChecksum> QUEUE_FILE_AND_CHECKSUM;
     private final ConcurrentLinkedQueue<String> QUEUE_EX_MESSAGES;
-    private final String HASH_ALGORITHM;
+    private final FindTaskSettings FIND_TASK_SETTINGS;
+    private final long LARGE_FILE_SIZE;
     private ResourcesProvider resProvider = ResourcesProvider.getInstance();
-    private final long LARGE_FILE_SIZE = (long) (Math.pow(2, 20) * 10);    //10 MB
 
     public DirectoryHandler(File file,
-                            String hashAlgorithm,
+                            FindTaskSettings findTaskSettings,
                             ConcurrentLinkedQueue<FileAndChecksum> queueProcessed,
                             ConcurrentLinkedQueue<String> queueExMessages) {
-        this(new File[]{file}, hashAlgorithm, queueProcessed, queueExMessages);
+        this(new File[]{file}, findTaskSettings, queueProcessed, queueExMessages);
     }
-    public DirectoryHandler(File[] files,
-                                 String hashAlgorithm,
-                                 ConcurrentLinkedQueue<FileAndChecksum> queueProcessed,
-                                 ConcurrentLinkedQueue<String> queueExMessages) {
 
-        this.CHECKSUM_MAKER = new CheckSumMaker(hashAlgorithm);
+    public DirectoryHandler(File[] files,
+                            FindTaskSettings findTaskSettings,
+                            ConcurrentLinkedQueue<FileAndChecksum> queueProcessed,
+                            ConcurrentLinkedQueue<String> queueExMessages) {
+        this.CHECKSUM_MAKER = new CheckSumMaker(findTaskSettings);
         this.FILES_TO_HANDLE = files;
         this.QUEUE_FILE_AND_CHECKSUM = queueProcessed;
-        this.HASH_ALGORITHM = hashAlgorithm;
+        this.FIND_TASK_SETTINGS = findTaskSettings;
         this.QUEUE_EX_MESSAGES = queueExMessages;
+        this.LARGE_FILE_SIZE = findTaskSettings.getBigFileSize();
     }
 
     /**
@@ -90,17 +91,15 @@ public class DirectoryHandler extends RecursiveAction {
     }
 
     protected void split(File largeFile) {
-//        QUEUE_EX_MESSAGES.offer(resProvider.getStrFromMessagesBundle("bigFile") +
-//                "\t" + largeFile);
         DirectoryHandler longTask = new DirectoryHandlerSoloThread(largeFile,
-                HASH_ALGORITHM,
+                FIND_TASK_SETTINGS,
                 QUEUE_FILE_AND_CHECKSUM,
                 QUEUE_EX_MESSAGES);
         forkAndRegistate(longTask);
     }
     protected void split(File[] files) {
         DirectoryHandler fastTask = new DirectoryHandler(files,
-                HASH_ALGORITHM,
+                FIND_TASK_SETTINGS,
                 QUEUE_FILE_AND_CHECKSUM,
                 QUEUE_EX_MESSAGES);
         forkAndRegistate(fastTask);
@@ -112,6 +111,8 @@ public class DirectoryHandler extends RecursiveAction {
     }
 
     protected void processFile(File file) {
+        if (!FIND_TASK_SETTINGS.isSuitable(file)) return;
+
         try {
             FileAndChecksum pair = new FileAndChecksum(file, CHECKSUM_MAKER.makeCheckSum(file));
             QUEUE_FILE_AND_CHECKSUM.offer(pair);

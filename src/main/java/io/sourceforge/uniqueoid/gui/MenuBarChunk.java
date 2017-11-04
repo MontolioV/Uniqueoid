@@ -33,6 +33,7 @@ public class MenuBarChunk extends AbstractGUIChunk {
     private Menu fileMenu = new Menu();
     private MenuItem saveMI = new MenuItem();
     private MenuItem loadMI = new MenuItem();
+    private MenuItem settingsMI = new MenuItem();
     private MenuItem exitMI = new MenuItem();
 
     private Menu editMenu = new Menu();
@@ -72,6 +73,7 @@ public class MenuBarChunk extends AbstractGUIChunk {
         fileMenu.setText(resProvider.getStrFromGUIBundle("fileMenu"));
         saveMI.setText(resProvider.getStrFromGUIBundle("saveMI"));
         loadMI.setText(resProvider.getStrFromGUIBundle("loadMI"));
+        settingsMI.setText(resProvider.getStrFromGUIBundle("settingsMI"));
         exitMI.setText(resProvider.getStrFromGUIBundle("exitMI"));
 
         editMenu.setText(resProvider.getStrFromGUIBundle("editMenu"));
@@ -165,15 +167,19 @@ public class MenuBarChunk extends AbstractGUIChunk {
                 chunkManager.loadResults(file);
             }
         });
+        settingsMI.setOnAction(event -> chunkManager.showSettingsNode());
         exitMI.setOnAction(event -> Platform.exit());
 
         saveMI.setAccelerator(new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN));
         loadMI.setAccelerator(new KeyCodeCombination(KeyCode.L, KeyCombination.CONTROL_DOWN));
+        settingsMI.setAccelerator(new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN));
         exitMI.setAccelerator(new KeyCodeCombination(KeyCode.Q, KeyCombination.CONTROL_DOWN));
 
         fileMenu.getItems().addAll(
                 saveMI,
                 loadMI,
+                new SeparatorMenuItem(),
+                settingsMI,
                 new SeparatorMenuItem(),
                 exitMI);
 

@@ -10,7 +10,6 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
-import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
@@ -108,16 +107,25 @@ public class SettingsChunk extends AbstractGUIChunk{
     }
 
     private Node makeSelfNode() {
-        FlowPane flowPane = new FlowPane(20, 5,
+        Node bottomNode = makeBottomNode();
+        AnchorPane anchorPane = new AnchorPane(bottomNode);
+        AnchorPane.setBottomAnchor(bottomNode, 0D);
+        AnchorPane.setLeftAnchor(bottomNode, 0D);
+        AnchorPane.setRightAnchor(bottomNode, 0D);
+        VBox.setVgrow(anchorPane, Priority.ALWAYS);
+
+        VBox vBox = new VBox(5,
                 makeAlgorithmAndParallelismSettingsNode(),
                 makeBigFileAndBufferSettingsNode(),
-                makeFileDelimiterSettingsNode());
-        flowPane.setOrientation(Orientation.HORIZONTAL);
+                makeFileDelimiterSettingsNode(),
+                anchorPane);
+        vBox.setPadding(new Insets(0, 20, 0, 0));
 
         BorderPane borderPane = new BorderPane();
-        borderPane.setCenter(flowPane);
-        borderPane.setBottom(makeBottomNode());
-        borderPane.setPadding(new Insets(20));
+        borderPane.setCenter(vBox);
+        borderPane.setRight(new Separator(Orientation.VERTICAL));
+        borderPane.setPadding(new Insets(20, 0, 20, 20));
+        borderPane.setMinWidth(0D);
         return borderPane;
     }
 
@@ -128,6 +136,8 @@ public class SettingsChunk extends AbstractGUIChunk{
         algorithmCB.setMaxWidth(Double.MAX_VALUE);
 
         isParallelChBox.setSelected(findTaskSettings.isParallel());
+        isParallelChBox.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        HBox.setHgrow(isParallelChBox, Priority.ALWAYS);
 
         parallelismSpinner = new Spinner<>(1, 1024, findTaskSettings.getParallelism());
         parallelismSpinner.getEditor().setPrefColumnCount(5);
@@ -146,6 +156,9 @@ public class SettingsChunk extends AbstractGUIChunk{
         ComboBox<BytePower> maxBufferSizeCB = new ComboBox<>(bytePowers);
         TextField bigFileTF = new TextField();
         TextField maxBufferTF = new TextField();
+
+        Node bigFileSizeNode = makeByteInputElementsNode(bigFileTF, bigFileSizeCB, bigFileSizeLabel);
+        Node maxBufferSizeNode = makeByteInputElementsNode(maxBufferTF, maxBufferSizeCB, maxBufferSizeLabel);
 
         bigFileSizeSupp = () -> {
             try {
@@ -172,9 +185,6 @@ public class SettingsChunk extends AbstractGUIChunk{
         bigFileTF.setText(String.valueOf(findTaskSettings.getBigFileSize()));
         maxBufferTF.setText(String.valueOf(findTaskSettings.getMaxBufferSize()));
 
-        Node bigFileSizeNode = makeByteInputElementsNode(bigFileTF, bigFileSizeCB, bigFileSizeLabel);
-        Node maxBufferSizeNode = makeByteInputElementsNode(maxBufferTF, maxBufferSizeCB, maxBufferSizeLabel);
-
         VBox result = new VBox(5, bigFileSizeNode, maxBufferSizeNode);
         return result;
     }
@@ -185,6 +195,9 @@ public class SettingsChunk extends AbstractGUIChunk{
         ComboBox<BytePower> maxMeasureCB = new ComboBox<>(bytePowers);
         TextField minSizeTF = new TextField();
         TextField maxSizeTF = new TextField();
+
+        Node minNode = makeByteInputElementsNode(minSizeTF, minMeasureCB, minSizeLabel);
+        Node maxNode = makeByteInputElementsNode(maxSizeTF, maxMeasureCB, maxSizeLabel);
 
         minFileSizeSupp = () -> {
             try {
@@ -211,9 +224,6 @@ public class SettingsChunk extends AbstractGUIChunk{
         minSizeTF.setText(String.valueOf(findTaskSettings.getMinFileSize()));
         maxSizeTF.setText(String.valueOf(findTaskSettings.getMaxFileSize()));
 
-        Node minNode = makeByteInputElementsNode(minSizeTF, minMeasureCB, minSizeLabel);
-        Node maxNode = makeByteInputElementsNode(maxSizeTF, maxMeasureCB, maxSizeLabel);
-
         VBox minMaxVBox = new VBox(5, minNode, maxNode);
         return minMaxVBox;
     }
@@ -235,27 +245,27 @@ public class SettingsChunk extends AbstractGUIChunk{
         defaultButton.setOnAction(event -> {
             findTaskSettings = new FindTaskSettings();
             save();
-            changeChunckAndRefresh();
+            makeChunk();
+            chunkManager.showSettingsNode();
         });
 
         saveButton.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
         cancelButton.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
         defaultButton.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
 
-        TilePane tilePane = new TilePane(Orientation.VERTICAL, 10, 10,
+        VBox vBox = new VBox(10,
                 saveButton,
                 cancelButton,
                 defaultButton);
-        tilePane.setAlignment(Pos.BOTTOM_RIGHT);
-        tilePane.setPrefColumns(1);
 
-        return tilePane;
+        return vBox;
     }
 
     private Node makeByteInputElementsNode(TextField textField, ComboBox<BytePower> comboBox, Label label) {
         comboBox.getSelectionModel().select(BytePower.BYTES);
         comboBox.setMaxHeight(Double.MAX_VALUE);
-        textField.setPrefWidth(200);
+        textField.setPrefWidth(100);
+        HBox.setHgrow(textField, Priority.ALWAYS);
         HBox hBox = new HBox(0, textField, comboBox);
         VBox vBox = new VBox(3, label, hBox);
         return vBox;
@@ -319,7 +329,7 @@ public class SettingsChunk extends AbstractGUIChunk{
     }
 
     private void changeChunckAndRefresh() {
-        chunkManager.showSetupNode();
+        chunkManager.hideSettingsNode();
         Platform.runLater(this::makeChunk);
     }
 }

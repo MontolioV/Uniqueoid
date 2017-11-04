@@ -10,12 +10,12 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  */
 public class DirectoryHandlerSoloThread extends DirectoryHandler {
 
-    public DirectoryHandlerSoloThread(File file, String hashAlgorithm, ConcurrentLinkedQueue<FileAndChecksum> queueProcessed, ConcurrentLinkedQueue<String> queueExMessages) {
-        super(file, hashAlgorithm, queueProcessed, queueExMessages);
+    public DirectoryHandlerSoloThread(File file, FindTaskSettings findTaskSettings, ConcurrentLinkedQueue<FileAndChecksum> queueProcessed, ConcurrentLinkedQueue<String> queueExMessages) {
+        super(file, findTaskSettings, queueProcessed, queueExMessages);
     }
 
-    public DirectoryHandlerSoloThread(File[] files, String hashAlgorithm, ConcurrentLinkedQueue<FileAndChecksum> queueProcessed, ConcurrentLinkedQueue<String> queueExMessages) {
-        super(files, hashAlgorithm, queueProcessed, queueExMessages);
+    public DirectoryHandlerSoloThread(File[] files, FindTaskSettings findTaskSettings, ConcurrentLinkedQueue<FileAndChecksum> queueProcessed, ConcurrentLinkedQueue<String> queueExMessages) {
+        super(files, findTaskSettings, queueProcessed, queueExMessages);
     }
 
     @Override

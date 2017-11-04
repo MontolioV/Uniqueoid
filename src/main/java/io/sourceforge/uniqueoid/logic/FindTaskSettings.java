@@ -65,7 +65,7 @@ public class FindTaskSettings implements Serializable{
         return minFileSize;
     }
 
-    public boolean testFile(File file) {
+    public boolean isSuitable(File file) {
         long fileSize = file.length();
         if (fileSize < minFileSize || fileSize > maxFileSize) {
             return false;

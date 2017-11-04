@@ -15,11 +15,12 @@ import java.security.NoSuchAlgorithmException;
 public class CheckSumMaker {
     private final MessageDigest MESSAGE_DIGEST;
     private ResourcesProvider resProvider = ResourcesProvider.getInstance();
-    private final int MAX_BUFFER_SIZE = (int) (Math.pow(2, 20) * 10);   //10 MB
+    private final int MAX_BUFFER_SIZE;
 
-    public CheckSumMaker(String mdAlgorithm) {
+    public CheckSumMaker(FindTaskSettings findTaskSettings) {
+        MAX_BUFFER_SIZE = findTaskSettings.getMaxBufferSize();
         try {
-            this.MESSAGE_DIGEST = MessageDigest.getInstance(mdAlgorithm);
+            this.MESSAGE_DIGEST = MessageDigest.getInstance(findTaskSettings.getHashAlgorithm());
         } catch (NoSuchAlgorithmException e) {
             e.printStackTrace();
             throw new IllegalArgumentException(

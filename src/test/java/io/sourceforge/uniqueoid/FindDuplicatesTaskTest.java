@@ -1,6 +1,7 @@
 package io.sourceforge.uniqueoid;
 
 import io.sourceforge.uniqueoid.logic.FindDuplicatesTask;
+import io.sourceforge.uniqueoid.logic.FindTaskSettings;
 import javafx.embed.swing.JFXPanel;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -19,7 +20,7 @@ import static org.junit.Assert.assertEquals;
 public class FindDuplicatesTaskTest {
     private FindDuplicatesTask task;
     private ArrayList<File> dirList;
-    private final String algorithm = "SHA-256";
+    private final FindTaskSettings FIND_TASK_SETTINGS = new FindTaskSettings();
 
     @BeforeClass
     public static void initToolkit() {
@@ -33,14 +34,14 @@ public class FindDuplicatesTaskTest {
         dirList.add(new File(ROOT_CONTROL.getFile().getParent()));
     }
 
-    protected FindDuplicatesTask makeFindDuplicatesTask(List<File> directories, String hash_algorithm) {
-        return new FindDuplicatesTask(directories, hash_algorithm);
+    protected FindDuplicatesTask makeFindDuplicatesTask(List<File> directories, FindTaskSettings findTaskSettings) {
+        return new FindDuplicatesTask(directories, findTaskSettings);
     }
 
     @Test
     public void call() throws Exception {
         Map<String, Set<File>> result;
-        task = makeFindDuplicatesTask(dirList, algorithm);
+        task = makeFindDuplicatesTask(dirList, FIND_TASK_SETTINGS);
 
         //Prepare control hashmap
         HashMap<String, Set<File>> control = new HashMap<>();
@@ -69,7 +70,7 @@ public class FindDuplicatesTaskTest {
         for (int i = 0; i < 10_000; i++) {
             dirList.add(new File(ROOT_CONTROL.getFile().getParent()));
         }
-        task = makeFindDuplicatesTask(dirList, algorithm);
+        task = makeFindDuplicatesTask(dirList, FIND_TASK_SETTINGS);
 
         Thread trd = new Thread(() -> task.run());
         trd.start();
@@ -87,7 +88,7 @@ public class FindDuplicatesTaskTest {
     public void countFiles() throws Exception {
         int result = 0;
         for (File file : dirList) {
-            result += makeFindDuplicatesTask(dirList, algorithm).countFiles(file);
+            result += makeFindDuplicatesTask(dirList, FIND_TASK_SETTINGS).countFiles(file);
         }
 
         assertEquals(7, result);
