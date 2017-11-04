@@ -14,15 +14,15 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  */
 public class FindDuplicatesTaskSoloThread extends FindDuplicatesTask{
 
-    public FindDuplicatesTaskSoloThread(List<File> directories, String hash_algorithm) {
-        super(directories, hash_algorithm);
+    public FindDuplicatesTaskSoloThread(List<File> directories, FindTaskSettings findTaskSettings) {
+        super(directories, findTaskSettings);
     }
-    public FindDuplicatesTaskSoloThread(List<File> directories, String hash_algorithm, Map<String, Set<File>> previousResult) {
-        super(directories, hash_algorithm, previousResult);
+    public FindDuplicatesTaskSoloThread(List<File> directories, FindTaskSettings findTaskSettings, Map<String, Set<File>> previousResult) {
+        super(directories, findTaskSettings, previousResult);
     }
 
     @Override
-    protected DirectoryHandler makeDirectoryHandler(File[] files, String hashAlgorithm, ConcurrentLinkedQueue<FileAndChecksum> queueProcessed, ConcurrentLinkedQueue<String> queueExMessages) {
-        return new DirectoryHandlerSoloThread(files, hashAlgorithm, queueProcessed, queueExMessages);
+    protected DirectoryHandler makeDirectoryHandler(File[] files, FindTaskSettings findTaskSettings, ConcurrentLinkedQueue<FileAndChecksum> queueProcessed, ConcurrentLinkedQueue<String> queueExMessages) {
+        return new DirectoryHandlerSoloThread(files, findTaskSettings, queueProcessed, queueExMessages);
     }
 }

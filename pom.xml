@@ -5,7 +5,7 @@
     <groupId>io.sourceforge.uniqueoid</groupId>
     <artifactId>Uniqueoid</artifactId>
     <description>Simple and adorable program to eliminate copies of files.</description>
-    <version>0.1.1</version>
+    <version>0.2.0</version>
     <packaging>jar</packaging>
     <url>https://uniqueoid.sourceforge.io</url>
 

@@ -23,11 +23,11 @@ public class FindDuplicatesTask extends Task<Map<String, Set<File>>> {
     private ResourcesProvider resProvider = ResourcesProvider.getInstance();
 
     private final List<File> DIRECTORIES;
-    private final String HASH_ALGORITHM;
+    private final FindTaskSettings FIND_TASK_SETTINGS;
     private Map<String, Set<File>> mapToReturn = new HashMap<>();
     private ConcurrentLinkedQueue<FileAndChecksum> queueProcessed = new ConcurrentLinkedQueue<>();
     private ConcurrentLinkedQueue<String> queueExMessages = new ConcurrentLinkedQueue<>();
-    private ForkJoinPool fjPool = new ForkJoinPool();
+    private ForkJoinPool fjPool;
     private Thread fjThread;
     private int filesCounter = 0;
     private int filesTotal = 0;
@@ -35,13 +35,14 @@ public class FindDuplicatesTask extends Task<Map<String, Set<File>>> {
     private long byteTotal = 0;
     private BufferedWriter logBW;
 
-    public FindDuplicatesTask(List<File> directories, String hash_algorithm) {
+    public FindDuplicatesTask(List<File> directories, FindTaskSettings findTaskSettings) {
         super();
         this.DIRECTORIES = directories;
-        HASH_ALGORITHM = hash_algorithm;
+        this.FIND_TASK_SETTINGS = findTaskSettings;
+        this.fjPool = new ForkJoinPool(findTaskSettings.getParallelism());
     }
-    public FindDuplicatesTask(List<File> directories, String hash_algorithm, Map<String, Set<File>> previousResult) {
-        this(directories, hash_algorithm);
+    public FindDuplicatesTask(List<File> directories, FindTaskSettings findTaskSettings, Map<String, Set<File>> previousResult) {
+        this(directories, findTaskSettings);
         mapToReturn = previousResult;
     }
 
@@ -91,7 +92,7 @@ public class FindDuplicatesTask extends Task<Map<String, Set<File>>> {
             int result = 0;
             if (dir.listFiles() == null) {
                 queueExMessages.offer(resProvider.getStrFromMessagesBundle("countFail") +
-                        "\t" + dir.toString() + "\n");
+                        "\t" + dir.toString());
             } else {
                 for (File file : dir.listFiles()) {
                     if (file.isDirectory()) {
@@ -112,7 +113,7 @@ public class FindDuplicatesTask extends Task<Map<String, Set<File>>> {
         fjThread = new Thread(() -> {
             File[] files = new File[DIRECTORIES.size()];
             files = DIRECTORIES.toArray(files);
-            DirectoryHandler directoryHandler = makeDirectoryHandler(files, HASH_ALGORITHM, queueProcessed, queueExMessages);
+            DirectoryHandler directoryHandler = makeDirectoryHandler(files, FIND_TASK_SETTINGS, queueProcessed, queueExMessages);
             fjPool.execute(directoryHandler);
             try {
                 directoryHandler.get();
@@ -125,8 +126,8 @@ public class FindDuplicatesTask extends Task<Map<String, Set<File>>> {
 
         fjThread.start();
     }
-    protected DirectoryHandler makeDirectoryHandler(File[] files, String hashAlgorithm, ConcurrentLinkedQueue<FileAndChecksum> queueProcessed, ConcurrentLinkedQueue<String> queueExMessages) {
-        return new DirectoryHandler(files, hashAlgorithm, queueProcessed, queueExMessages);
+    protected DirectoryHandler makeDirectoryHandler(File[] files, FindTaskSettings findTaskSettings, ConcurrentLinkedQueue<FileAndChecksum> queueProcessed, ConcurrentLinkedQueue<String> queueExMessages) {
+        return new DirectoryHandler(files, findTaskSettings, queueProcessed, queueExMessages);
     }
 
     private void controlAndOutputResult() throws InterruptedException {

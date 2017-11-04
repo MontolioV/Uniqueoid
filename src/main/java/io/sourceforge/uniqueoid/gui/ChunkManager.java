@@ -1,6 +1,7 @@
 package io.sourceforge.uniqueoid.gui;
 
 import io.sourceforge.uniqueoid.logic.FindDuplicatesTask;
+import io.sourceforge.uniqueoid.logic.FindTaskSettings;
 import javafx.beans.property.BooleanProperty;
 import javafx.scene.Parent;
 import javafx.scene.control.Alert;
@@ -22,6 +23,7 @@ public class ChunkManager {
     private RuntimeStatusChunk runtimeChunk;
     private DeleterChunk deleterChunk;
     private AboutChunk aboutChunk;
+    private SettingsChunk settingsChunk;
 
     public ChunkManager(GUI gui) {
         GUI = gui;
@@ -35,13 +37,15 @@ public class ChunkManager {
     protected void makeChunks() {
         menuBarChunk = new MenuBarChunk(this, GUI.getPrimaryStage());
         runtimeChunk = new RuntimeStatusChunk(this);
-        setupChunk = new SetupChunk(GUI.getPrimaryStage());
+        setupChunk = new SetupChunk(GUI.getPrimaryStage(), this);
+        settingsChunk = new SettingsChunk(this);
 
         setupChunk.setStartButtonHandler(runtimeChunk.getTaskButtonHandler(() -> setupChunk.getStartTask()));
 
         chunks.add(menuBarChunk);
         chunks.add(runtimeChunk);
         chunks.add(setupChunk);
+        chunks.add(settingsChunk);
     }
     protected void makeDeleterChunk() {
         deleterChunk = new DeleterChunk(this);
@@ -55,7 +59,7 @@ public class ChunkManager {
         chunks.add(aboutChunk);
     }
 
-    //Show in GUI
+    //Show/hide in GUI
     protected void showMenuBar() {
         GUI.setTopNode(menuBarChunk.getAsNode());
     }
@@ -77,6 +81,12 @@ public class ChunkManager {
     }
     protected void showInNewStage(Parent parent) {
         GUI.showInNewStage(parent);
+    }
+    protected void showSettingsNode() {
+        GUI.setLeftNode(settingsChunk.getAsNode());
+    }
+    protected void hideSettingsNode() {
+        GUI.setLeftNode(null);
     }
 
     //Update all chunks
@@ -191,6 +201,11 @@ public class ChunkManager {
     }
     protected void ignoreDuplicatesByRoot() {
         deleterChunk.ignoreDuplicatesByRoot();
+    }
+
+    //Settings chunk features
+    protected FindTaskSettings getFindTaskSettings() {
+        return settingsChunk.getFindTaskSettings();
     }
 
     //Memory saving

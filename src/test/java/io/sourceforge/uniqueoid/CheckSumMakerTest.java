@@ -1,6 +1,7 @@
 package io.sourceforge.uniqueoid;
 
 import io.sourceforge.uniqueoid.logic.CheckSumMaker;
+import io.sourceforge.uniqueoid.logic.FindTaskSettings;
 
 import java.security.NoSuchAlgorithmException;
 
@@ -18,7 +19,7 @@ public class CheckSumMakerTest {
     private TestMatEnum fileCopyBad;
 
     public CheckSumMakerTest() throws NoSuchAlgorithmException {
-        checkSumMaker = new CheckSumMaker("SHA-256");
+        checkSumMaker = new CheckSumMaker(new FindTaskSettings());
         fileControl = TestMatEnum.ROOT_CONTROL;
         fileCopyGood = TestMatEnum.INNER_COPY_GOOD;
         fileCopyBad = TestMatEnum.ROOT_COPY_BAD;

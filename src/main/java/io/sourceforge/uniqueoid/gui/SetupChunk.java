@@ -4,14 +4,15 @@ import io.sourceforge.uniqueoid.GlobalFiles;
 import io.sourceforge.uniqueoid.ResourcesProvider;
 import io.sourceforge.uniqueoid.logic.FindDuplicatesTask;
 import io.sourceforge.uniqueoid.logic.FindDuplicatesTaskSoloThread;
-import javafx.collections.FXCollections;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
-import javafx.scene.control.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.Separator;
 import javafx.scene.layout.*;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
@@ -32,13 +33,11 @@ import java.util.Set;
 public class SetupChunk extends AbstractGUIChunk {
     private ResourcesProvider resProvider = ResourcesProvider.getInstance();
     private Stage mainStage;
+    private ChunkManager chunkManager;
 
     private boolean canStart;
 
     private List<File> chosenFiles = new ArrayList<>();
-    private String chosenAlgorithm = "SHA-256";
-
-    private CheckBox parallelismChBox = new CheckBox();
 
     private Button addDirectoryButton = new Button();
     private Button addFileButton = new Button();
@@ -50,8 +49,9 @@ public class SetupChunk extends AbstractGUIChunk {
     private Label algorithmLabel = new Label();
     private Label showDirLabel = new Label("");
 
-    public SetupChunk(Stage mainStage) {
+    public SetupChunk(Stage mainStage, ChunkManager chunkManager) {
         this.mainStage = mainStage;
+        this.chunkManager = chunkManager;
         setSelfNode(makePane());
         updateLocaleContent();
     }
@@ -61,7 +61,6 @@ public class SetupChunk extends AbstractGUIChunk {
      */
     @Override
     public void updateLocaleContent() {
-        parallelismChBox.setText(resProvider.getStrFromGUIBundle("parallelismChBox"));
         startButton.setText(resProvider.getStrFromGUIBundle("startButton"));
         addToResultsButton.setText((resProvider.getStrFromGUIBundle("addToResultsButton")));
         addDirectoryButton.setText(resProvider.getStrFromGUIBundle("addDirectoryButton"));
@@ -112,13 +111,6 @@ public class SetupChunk extends AbstractGUIChunk {
                 showDirLabel);
 
         //Setting buttons
-        ComboBox<String> algorithmCB = new ComboBox<>(FXCollections.observableArrayList(
-                "MD5", "SHA-1", "SHA-256"));
-        algorithmCB.setOnAction(event -> chosenAlgorithm = algorithmCB.getValue());
-        algorithmCB.getSelectionModel().selectLast();
-
-        parallelismChBox.setSelected(true);
-
         addDirectoryButton.setOnAction(event -> {
             DirectoryChooser dirChooser = new DirectoryChooser();
             dirChooser.setInitialDirectory(GlobalFiles.getInstance().getLastVisitedDir());
@@ -138,17 +130,12 @@ public class SetupChunk extends AbstractGUIChunk {
             refreshState();
         });
 
-        algorithmCB.setMaxWidth(Double.MAX_VALUE);
         addDirectoryButton.setMaxWidth(Double.MAX_VALUE);
         addFileButton.setMaxWidth(Double.MAX_VALUE);
         clearDirsButton.setMaxWidth(Double.MAX_VALUE);
 
         VBox buttonsPane = new VBox(10);
         buttonsPane.getChildren().addAll(
-                algorithmLabel,
-                algorithmCB,
-                parallelismChBox,
-                new Separator(),
                 addDirectoryButton,
                 addFileButton,
                 clearDirsButton);
@@ -214,17 +201,17 @@ public class SetupChunk extends AbstractGUIChunk {
     }
 
     protected FindDuplicatesTask getStartTask() {
-        if (parallelismChBox.isSelected()) {
-            return new FindDuplicatesTask(chosenFiles, chosenAlgorithm);
+        if (chunkManager.getFindTaskSettings().isParallel()) {
+            return new FindDuplicatesTask(chosenFiles, chunkManager.getFindTaskSettings());
         } else {
-            return new FindDuplicatesTaskSoloThread(chosenFiles, chosenAlgorithm);
+            return new FindDuplicatesTaskSoloThread(chosenFiles, chunkManager.getFindTaskSettings());
         }
     }
     protected FindDuplicatesTask getAddToResultsTask(Map<String, Set<File>> previousResult) {
-        if (parallelismChBox.isSelected()) {
-            return new FindDuplicatesTask(chosenFiles, chosenAlgorithm, previousResult);
+        if (chunkManager.getFindTaskSettings().isParallel()) {
+            return new FindDuplicatesTask(chosenFiles, chunkManager.getFindTaskSettings(), previousResult);
         } else {
-            return new FindDuplicatesTaskSoloThread(chosenFiles, chosenAlgorithm, previousResult);
+            return new FindDuplicatesTaskSoloThread(chosenFiles, chunkManager.getFindTaskSettings(), previousResult);
         }
     }
 

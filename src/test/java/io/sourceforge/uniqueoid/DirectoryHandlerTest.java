@@ -2,6 +2,7 @@ package io.sourceforge.uniqueoid;
 
 import io.sourceforge.uniqueoid.logic.DirectoryHandler;
 import io.sourceforge.uniqueoid.logic.FileAndChecksum;
+import io.sourceforge.uniqueoid.logic.FindTaskSettings;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -29,7 +30,7 @@ public class DirectoryHandlerTest {
     @Test
     public void run_1Thread() throws Exception {
         DirectoryHandler dirHandler;
-        dirHandler = makeDirectoryHandler(new File(ROOT_CONTROL.getFile().getParent()), "SHA-256", queueFilesChSs, queueExMessages);
+        dirHandler = makeDirectoryHandler(new File(ROOT_CONTROL.getFile().getParent()), new FindTaskSettings(), queueFilesChSs, queueExMessages);
         ForkJoinPool fjPool = new ForkJoinPool();
 
         fjPool.invoke(dirHandler);
@@ -38,7 +39,7 @@ public class DirectoryHandlerTest {
         assertEquals(7, queueFilesChSs.size() + queueExMessages.size());
     }
 
-    protected DirectoryHandler makeDirectoryHandler(File file, String hashAlgorithm, ConcurrentLinkedQueue<FileAndChecksum> queueProcessed, ConcurrentLinkedQueue<String> queueExMessages) {
-        return new DirectoryHandler(file, hashAlgorithm, queueProcessed, queueExMessages);
+    protected DirectoryHandler makeDirectoryHandler(File file, FindTaskSettings findTaskSettings, ConcurrentLinkedQueue<FileAndChecksum> queueProcessed, ConcurrentLinkedQueue<String> queueExMessages) {
+        return new DirectoryHandler(file, findTaskSettings, queueProcessed, queueExMessages);
     }
 }
