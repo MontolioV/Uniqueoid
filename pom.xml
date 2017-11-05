@@ -5,7 +5,7 @@
     <groupId>io.sourceforge.uniqueoid</groupId>
     <artifactId>Uniqueoid</artifactId>
     <description>Simple and adorable program to eliminate copies of files.</description>
-    <version>0.2.0</version>
+    <version>0.2.1</version>
     <packaging>jar</packaging>
     <url>https://uniqueoid.sourceforge.io</url>
 
@@ -41,6 +41,7 @@
                 <directory>${basedir}</directory>
                 <includes>
                     <include>LICENSE</include>
+                    <include>README.md</include>
                 </includes>
             </resource>
         </resources>
