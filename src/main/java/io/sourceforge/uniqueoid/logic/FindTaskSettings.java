@@ -37,6 +37,7 @@ public class FindTaskSettings implements Serializable{
         this.minFileSize = minFileSize;
     }
 
+    @Deprecated
     public String getHashAlgorithm() {
         return hashAlgorithm;
     }

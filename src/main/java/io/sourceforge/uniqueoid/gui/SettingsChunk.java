@@ -37,7 +37,7 @@ public class SettingsChunk extends AbstractGUIChunk{
     private Supplier<Long> bigFileSizeSupp;
     private Supplier<Integer> maxHashBufferSizeSupp;
 
-    private ComboBox<String> algorithmCB;
+//    private ComboBox<String> algorithmCB;
     private CheckBox isParallelChBox = new CheckBox();
     private Spinner<Integer> parallelismSpinner;
 
@@ -130,10 +130,10 @@ public class SettingsChunk extends AbstractGUIChunk{
     }
 
     private Node makeAlgorithmAndParallelismSettingsNode() {
-        algorithmCB = new ComboBox<>(FXCollections.observableArrayList(
-                "MD5", "SHA-1", "SHA-256"));
-        algorithmCB.getSelectionModel().select(findTaskSettings.getHashAlgorithm());
-        algorithmCB.setMaxWidth(Double.MAX_VALUE);
+//        algorithmCB = new ComboBox<>(FXCollections.observableArrayList(
+//                "MD5", "SHA-1", "SHA-256"));
+//        algorithmCB.getSelectionModel().select(findTaskSettings.getHashAlgorithm());
+//        algorithmCB.setMaxWidth(Double.MAX_VALUE);
 
         isParallelChBox.setSelected(findTaskSettings.isParallel());
         isParallelChBox.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
@@ -144,8 +144,8 @@ public class SettingsChunk extends AbstractGUIChunk{
 
         HBox parallelHBox = new HBox(5, isParallelChBox, parallelismSpinner);
         VBox result = new VBox(5,
-                algorithmLabel,
-                algorithmCB,
+//                algorithmLabel,
+//                algorithmCB,
                 parallelHBox);
         return result;
     }
@@ -231,7 +231,8 @@ public class SettingsChunk extends AbstractGUIChunk{
 
         saveButton.setOnAction(event -> {
             findTaskSettings = new FindTaskSettings(
-                    algorithmCB.getSelectionModel().getSelectedItem(),
+//                    algorithmCB.getSelectionModel().getSelectedItem(),
+                    null,
                     isParallelChBox.isSelected(),
                     parallelismSpinner.getValue(),
                     bigFileSizeSupp.get(),

@@ -10,17 +10,20 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 /**
+ * I use SHA-1, SHA-256 and file size composition as "checksum".
  * <p>Created by MontolioV on 30.05.17.
  */
 public class CheckSumMaker {
-    private final MessageDigest MESSAGE_DIGEST;
+    private final MessageDigest MESSAGE_DIGEST_SHA256;
+    private final MessageDigest MESSAGE_DIGEST_SHA1;
     private ResourcesProvider resProvider = ResourcesProvider.getInstance();
     private final int MAX_BUFFER_SIZE;
 
     public CheckSumMaker(FindTaskSettings findTaskSettings) {
         MAX_BUFFER_SIZE = findTaskSettings.getMaxBufferSize();
         try {
-            this.MESSAGE_DIGEST = MessageDigest.getInstance(findTaskSettings.getHashAlgorithm());
+            this.MESSAGE_DIGEST_SHA256 = MessageDigest.getInstance("SHA-256");
+            this.MESSAGE_DIGEST_SHA1 = MessageDigest.getInstance("SHA-1");
         } catch (NoSuchAlgorithmException e) {
             e.printStackTrace();
             throw new IllegalArgumentException(
@@ -35,11 +38,10 @@ public class CheckSumMaker {
                     "\t" + file.toString());
         }
 
-        byte[] bytesHash = makeBytesHash(file);
-        return stringRepresentation(bytesHash);
+        return stringRepresentation(file.length(), makeBytesHash(file));
     }
 
-    private byte[] makeBytesHash(File file) throws IOException {
+    private byte[][] makeBytesHash(File file) throws IOException {
         try (BufferedInputStream bufferedIS = new BufferedInputStream(new FileInputStream(file))) {
             int bufferSize = file.length() < MAX_BUFFER_SIZE ? (int) file.length() : MAX_BUFFER_SIZE;
             byte[] digestBuffer = new byte[bufferSize];
@@ -47,24 +49,34 @@ public class CheckSumMaker {
 
             while (inputStreamResponse > -1) {
                 if (inputStreamResponse == bufferSize) {
-                    MESSAGE_DIGEST.update(digestBuffer);
+                    MESSAGE_DIGEST_SHA256.update(digestBuffer);
+                    MESSAGE_DIGEST_SHA1.update(digestBuffer);
                 } else {
-                    MESSAGE_DIGEST.update(digestBuffer, 0, inputStreamResponse);
+                    MESSAGE_DIGEST_SHA256.update(digestBuffer, 0, inputStreamResponse);
+                    MESSAGE_DIGEST_SHA1.update(digestBuffer, 0, inputStreamResponse);
                 }
                 inputStreamResponse = bufferedIS.read(digestBuffer);
             }
-            return MESSAGE_DIGEST.digest();
+            byte[][] result = new byte[][]{MESSAGE_DIGEST_SHA256.digest(),
+                                           MESSAGE_DIGEST_SHA1.digest()};
+            return result;
         } catch (IOException e) {
             throw new IOException(resProvider.getStrFromExceptionBundle("hashingFail") +
                     "\t" + file.getAbsolutePath(), e);
         }
     }
 
-    private String stringRepresentation(byte[] bytes) {
+    private String stringRepresentation(long fileLength, byte[]... bytes) {
+
         StringBuilder sb = new StringBuilder();
-        for (byte b : bytes) {
-            sb.append(String.format("%02x", b));
+        for (byte[] bAr : bytes) {
+            for (byte b : bAr) {
+                sb.append(String.format("%02x", b));
+            }
+            sb.append("_");
         }
+        sb.append(String.valueOf(fileLength));
+
         return sb.toString();
     }
 }

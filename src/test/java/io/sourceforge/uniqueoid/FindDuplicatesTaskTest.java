@@ -50,13 +50,13 @@ public class FindDuplicatesTaskTest {
         alTmp.add(INNER_COPY_GOOD.getFile());
         alTmp.add(INNER2_COPY_GOOD.getFile());
         alTmp.add(INNER2_INNER_COPY_GOOD.getFile());
-        control.put(ROOT_CONTROL.getSha256CheckSum(), alTmp);
+        control.put(ROOT_CONTROL.getCheckSum(), alTmp);
 
         alTmp = new HashSet<>();
         alTmp.add(ROOT_COPY_BAD.getFile());
         alTmp.add(INNER2_COPY_BAD.getFile());
         alTmp.add(INNER2_INNER_COPY_BAD.getFile());
-        control.put(ROOT_COPY_BAD.getSha256CheckSum(), alTmp);
+        control.put(ROOT_COPY_BAD.getCheckSum(), alTmp);
 
         task.run();
         result = task.get();

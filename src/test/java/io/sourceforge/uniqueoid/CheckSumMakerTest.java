@@ -35,8 +35,8 @@ public class CheckSumMakerTest {
         assertNotEquals(chSControl, chSCopyBad);
         assertNotEquals(chSCopyGood, chSCopyBad);
 
-        assertEquals(fileControl.getSha256CheckSum(), chSControl);
-        assertEquals(fileCopyGood.getSha256CheckSum(), chSCopyGood);
-        assertEquals(fileCopyBad.getSha256CheckSum(), chSCopyBad);
+        assertEquals(fileControl.getCheckSum(), chSControl);
+        assertEquals(fileCopyGood.getCheckSum(), chSCopyGood);
+        assertEquals(fileCopyBad.getCheckSum(), chSCopyBad);
     }
 }

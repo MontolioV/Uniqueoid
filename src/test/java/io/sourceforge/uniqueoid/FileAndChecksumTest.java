@@ -19,10 +19,10 @@ public class FileAndChecksumTest {
 
     @Before
     public void setUp() throws Exception {
-        pairControl = new FileAndChecksum(ROOT_CONTROL.getFile(), ROOT_CONTROL.getSha256CheckSum());
-        pairCopyOfControl = new FileAndChecksum(ROOT_CONTROL.getFile(), ROOT_CONTROL.getSha256CheckSum());
-        pairPathDifferent = new FileAndChecksum(INNER2_COPY_GOOD.getFile(), INNER2_COPY_GOOD.getSha256CheckSum());
-        pairFullDifferent = new FileAndChecksum(INNER2_INNER_COPY_BAD.getFile(), INNER2_INNER_COPY_BAD.getSha256CheckSum());
+        pairControl = new FileAndChecksum(ROOT_CONTROL.getFile(), ROOT_CONTROL.getCheckSum());
+        pairCopyOfControl = new FileAndChecksum(ROOT_CONTROL.getFile(), ROOT_CONTROL.getCheckSum());
+        pairPathDifferent = new FileAndChecksum(INNER2_COPY_GOOD.getFile(), INNER2_COPY_GOOD.getCheckSum());
+        pairFullDifferent = new FileAndChecksum(INNER2_INNER_COPY_BAD.getFile(), INNER2_INNER_COPY_BAD.getCheckSum());
     }
 
     @Test
