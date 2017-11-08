@@ -190,9 +190,6 @@ public class ChunkManager {
             deleterChunk.updateChunk();
         }
     }
-    protected void updateChecksumRepresentation() {
-        deleterChunk.updateChecksumTextRepresentation();
-    }
     protected void ignoreSelectedDuplicate() {
         deleterChunk.ignoreSelectedDuplicate();
     }

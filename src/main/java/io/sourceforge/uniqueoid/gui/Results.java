@@ -94,14 +94,17 @@ public class Results {
         duplicateChSumSet = new HashSet<>();
         processedFilesMap.entrySet().stream().filter(entry -> entry.getValue().size() > 1).forEach(entry -> duplicateChSumSet.add(entry.getKey()));
     }
-
-    protected Set<File> getDuplicateFilesCopy(String checksumKey) {
-        for (File file : processedFilesMap.get(checksumKey)) {
+    private void validateFiles(String checksum) {
+        for (File file : processedFilesMap.get(checksum)) {
             if (!file.exists()) {
                 update();
                 break;
             }
         }
+    }
+
+    protected Set<File> getDuplicateFilesCopy(String checksumKey) {
+        validateFiles(checksumKey);
         return new HashSet<>(processedFilesMap.get(checksumKey));
     }
     protected Set<String> getDuplicateChecksumSet() {
@@ -133,13 +136,9 @@ public class Results {
     }
 
     protected void chooseOneAmongDuplicates(String checksum, File fileThatRemains) {
+        validateFiles(checksum);
+
         Set<File> duplList = processedFilesMap.get(checksum);
-        for (File file : duplList) {
-            if (!file.exists()) {
-                update();
-                break;
-            }
-        }
         if (!duplList.contains(fileThatRemains)) {
             chunkManager.showException(new NoSuchFileException(fileThatRemains.toString()));
             return;
@@ -152,7 +151,6 @@ public class Results {
             filesToDelete.add(fileToDelete);
         });
         duplicateChoiceMade.add(checksum);
-        chunkManager.updateChecksumRepresentation();
     }
     protected int[] massChooseByParent(String patternToFind) {
         return massChoose(byParentPredicate, patternToFind);

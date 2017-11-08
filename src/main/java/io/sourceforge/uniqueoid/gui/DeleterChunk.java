@@ -320,6 +320,7 @@ public class DeleterChunk extends AbstractGUIChunk {
         showSelected(selectedFile);
         chunkManager.chooseOneAmongDuplicates(currentChecksum, selectedFile);
         updateStatisticsLabel();
+        updateChecksumTextRepresentation();
     }
     private void showSelected(File selectedFile) {
         if (selectedFile == null) return;
