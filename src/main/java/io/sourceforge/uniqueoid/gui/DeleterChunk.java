@@ -39,6 +39,7 @@ public class DeleterChunk extends AbstractGUIChunk {
     private ChunkManager chunkManager;
 
     private AtomicLong previewTimeStamp = new AtomicLong();
+    private AtomicLong searchEnterTimeStamp = new AtomicLong();
 
     private Executor deleterExecutor;
     private Task<Void> showDuplicatesTask;
@@ -63,6 +64,7 @@ public class DeleterChunk extends AbstractGUIChunk {
     private Label previewLabel = new Label();
     private Label massChooserLabel = new Label();
     private Label statisticsLabel = new Label();
+    private Label massChooserTFBackgroundLabel = new Label();
 
     private TextField massChooserTF = new TextField();
 
@@ -85,6 +87,7 @@ public class DeleterChunk extends AbstractGUIChunk {
         hashLabel.setText(resProvider.getStrFromGUIBundle("hashLabel"));
         previewLabel.setText(resProvider.getStrFromGUIBundle("previewLabel"));
         massChooserLabel.setText(resProvider.getStrFromGUIBundle("massChooserLabel"));
+        massChooserTFBackgroundLabel.setText(resProvider.getStrFromGUIBundle("massChooserTFBackgroundLabel"));
 
         toSetupButton.setText(resProvider.getStrFromGUIBundle("setupNode"));
         toRuntimeButton.setText(resProvider.getStrFromGUIBundle("runtimeNode"));
@@ -158,7 +161,6 @@ public class DeleterChunk extends AbstractGUIChunk {
                     } else {
                         currentChecksum = null;
                     }
-                    massChooserTF.setText("");
                     updateChecksumTextRepresentation();
                     updateDuplicatesRepresentation(currentChecksum);
                     updateStatisticsLabel();
@@ -167,6 +169,34 @@ public class DeleterChunk extends AbstractGUIChunk {
     private VBox makeMassChooserPane() {
         VBox result;
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
+
+        massChooserTFBackgroundLabel.maxWidthProperty().bind(massChooserTF.widthProperty());
+        massChooserTFBackgroundLabel.visibleProperty().bind(massChooserTF.textProperty().isEmpty());
+        massChooserTFBackgroundLabel.setStyle("-fx-opacity: 0.5");
+        massChooserTFBackgroundLabel.setMouseTransparent(true);
+        massChooserTFBackgroundLabel.setPadding(new Insets(0, 0, 0, 10));
+
+        massChooserTF.textProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue.contains(System.getProperty("file.separator"))) return;
+            Task<Void> filterTask = new Task<Void>() {
+                @Override
+                protected Void call() throws Exception {
+                    long ownTimeStamp = System.currentTimeMillis();
+                    searchEnterTimeStamp.set(ownTimeStamp);
+
+                    Thread.sleep(500);
+                    if (searchEnterTimeStamp.get() != ownTimeStamp) return null;
+
+                    chunkManager.makeChecksumSetByFileName(newValue);
+                    Platform.runLater(() -> updateChecksumListView());
+                    return null;
+                }
+            };
+
+            Supplier<Void> doNothingSupp = () -> null;
+
+            runTaskSeparateThread(filterTask, doNothingSupp, resProvider.getStrFromGUIBundle("filterProgressLabel"));
+        });
 
         chooserByParentButton.setOnAction(event -> {
             String pattern = massChooserTF.getText();
@@ -198,8 +228,10 @@ public class DeleterChunk extends AbstractGUIChunk {
         bindToTemplateTF(chooserByParentButton.disableProperty());
         bindToTemplateTF(chooserByRootButton.disableProperty());
 
-        HBox.setHgrow(massChooserTF, Priority.ALWAYS);
-        HBox textBox = new HBox(5, massChooserLabel, massChooserTF);
+        StackPane massChooserTFStackPane = new StackPane(massChooserTF, massChooserTFBackgroundLabel);
+        HBox.setHgrow(massChooserTFStackPane, Priority.ALWAYS);
+
+        HBox textBox = new HBox(5, massChooserLabel, massChooserTFStackPane);
         textBox.setAlignment(Pos.CENTER);
 
         chooserByParentButton.setMaxWidth(Double.MAX_VALUE);
@@ -482,6 +514,7 @@ public class DeleterChunk extends AbstractGUIChunk {
 
         updateChecksumTextRepresentation();
         checksumListView.setItems(obsList);
+        checksumListView.getSelectionModel().selectFirst();
     }
     protected void updateChecksumTextRepresentation() {
         for (Text text : checksumTextSet) {
@@ -506,6 +539,10 @@ public class DeleterChunk extends AbstractGUIChunk {
     }
     protected void ignoreDuplicatesByRoot() {
         chunkManager.ignoreDuplicatesFromRoot(massChooserTF.getText());
+    }
+
+    protected void removeFilter() {
+        massChooserTF.setText("");
     }
 
     private void bindToTemplateTF(BooleanProperty booleanProperty) {

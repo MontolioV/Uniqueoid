@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiPredicate;
+import java.util.function.Predicate;
 
 /**
  * <p>Created by MontolioV on 30.08.17.
@@ -93,6 +94,22 @@ public class Results {
     private void makeDuplicateSet() {
         duplicateChSumSet = new HashSet<>();
         processedFilesMap.entrySet().stream().filter(entry -> entry.getValue().size() > 1).forEach(entry -> duplicateChSumSet.add(entry.getKey()));
+    }
+    protected synchronized void makeDuplicateSetByFileName(String fileNameStarts) {
+        if (fileNameStarts == null || fileNameStarts.equals("")) {
+            makeDuplicateSet();
+            return;
+        }
+
+        Predicate<File> nameStartsWithPred = file -> {
+            return file.getName().toLowerCase().contains(fileNameStarts.toLowerCase());
+        };
+
+        duplicateChSumSet = new HashSet<>();
+        processedFilesMap.entrySet().stream()
+                .filter(entry -> entry.getValue().size() > 1)
+                .filter(entry -> entry.getValue().stream().anyMatch(nameStartsWithPred))
+                .forEach(entry -> duplicateChSumSet.add(entry.getKey()));
     }
     private void validateFiles(String checksum) {
         for (File file : processedFilesMap.get(checksum)) {

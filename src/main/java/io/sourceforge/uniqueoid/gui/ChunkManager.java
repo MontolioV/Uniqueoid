@@ -133,6 +133,9 @@ public class ChunkManager {
     protected Set<String> getDuplicatesChecksumSet() {
         return results.getDuplicateChecksumSet();
     }
+    protected void makeChecksumSetByFileName(String fileNameStarts) {
+        results.makeDuplicateSetByFileName(fileNameStarts);
+    }
     protected void chooseOneAmongDuplicates(String checksum, File fileThatRemains) {
         results.chooseOneAmongDuplicates(checksum, fileThatRemains);
     }
@@ -198,6 +201,9 @@ public class ChunkManager {
     }
     protected void ignoreDuplicatesByRoot() {
         deleterChunk.ignoreDuplicatesByRoot();
+    }
+    protected void removeFilter() {
+        deleterChunk.removeFilter();
     }
 
     //Settings chunk features

@@ -37,6 +37,7 @@ public class MenuBarChunk extends AbstractGUIChunk {
     private MenuItem exitMI = new MenuItem();
 
     private Menu editMenu = new Menu();
+    private MenuItem removeFilterMI = new MenuItem();
     private Menu deletionEditMenu = new Menu();
     private MenuItem unselectCurrentMI = new MenuItem();
     private MenuItem unselectAllMI = new MenuItem();
@@ -84,6 +85,7 @@ public class MenuBarChunk extends AbstractGUIChunk {
         removeFileFromResultMI.setText(resProvider.getStrFromGUIBundle("removeFileFromResultMI"));
         removeDirectoryFromResultMI.setText(resProvider.getStrFromGUIBundle("removeDirectoryFromResultMI"));
         removeRootFromResultMI.setText(resProvider.getStrFromGUIBundle("removeRootFromResultMI"));
+        removeFilterMI.setText(resProvider.getStrFromGUIBundle("removeFilterMI"));
 
         panelsMenu.setText(resProvider.getStrFromGUIBundle("panelsMenu"));
         setupPanelMI.setText((resProvider.getStrFromGUIBundle("setupNode")));
@@ -191,7 +193,9 @@ public class MenuBarChunk extends AbstractGUIChunk {
         unselectCurrentMI.setAccelerator(new KeyCodeCombination(KeyCode.Z, KeyCombination.ALT_DOWN));
         unselectAllMI.setOnAction(event -> chunkManager.removeSelectionsAll());
         unselectAllMI.setAccelerator(new KeyCodeCombination(KeyCode.A, KeyCombination.ALT_DOWN));
-        deletionEditMenu.getItems().addAll(unselectCurrentMI, unselectAllMI);
+        deletionEditMenu.getItems().addAll(
+                unselectCurrentMI,
+                unselectAllMI);
 
         removeFileFromResultMI.setOnAction(event -> chunkManager.ignoreSelectedDuplicate());
         removeFileFromResultMI.setAccelerator(new KeyCodeCombination(KeyCode.R, KeyCombination.ALT_DOWN));
@@ -199,10 +203,18 @@ public class MenuBarChunk extends AbstractGUIChunk {
         removeDirectoryFromResultMI.setAccelerator(new KeyCodeCombination(KeyCode.R, KeyCombination.ALT_DOWN, KeyCombination.CONTROL_DOWN));
         removeRootFromResultMI.setOnAction(event -> chunkManager.ignoreDuplicatesByRoot());
         removeRootFromResultMI.setAccelerator(new KeyCodeCombination(KeyCode.R, KeyCombination.ALT_DOWN, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN));
+        resultsEditMenu.getItems().addAll(
+                removeFileFromResultMI,
+                removeDirectoryFromResultMI,
+                removeRootFromResultMI);
 
-        resultsEditMenu.getItems().addAll(removeFileFromResultMI, removeDirectoryFromResultMI, removeRootFromResultMI);
+        removeFilterMI.setOnAction(event -> chunkManager.removeFilter());
+        removeFilterMI.setAccelerator(new KeyCodeCombination(KeyCode.C, KeyCombination.ALT_DOWN));
 
-        editMenu.getItems().addAll(deletionEditMenu, resultsEditMenu);
+        editMenu.getItems().addAll(
+                deletionEditMenu,
+                resultsEditMenu,
+                removeFilterMI);
         return editMenu;
     }
 
