@@ -235,10 +235,10 @@ public class Results {
     private void massIgnore(BiPredicate<File, String> ignoreCondition, String patternToFind) {
         HashMap<File, String> filesWithChecksumsToIgnore = new HashMap<>();
 
-        for (Map.Entry<String, Set<File>> mainMapEntry : processedFilesMap.entrySet()) {
-            for (File duplicate : mainMapEntry.getValue()) {
-                if (ignoreCondition.test(duplicate, patternToFind)) {
-                    filesWithChecksumsToIgnore.put(duplicate, mainMapEntry.getKey());
+        for (String checksum : duplicateChSumSet) {
+            for (File file : processedFilesMap.get(checksum)) {
+                if (ignoreCondition.test(file, patternToFind)) {
+                    filesWithChecksumsToIgnore.put(file, checksum);
                 }
             }
         }
