@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiPredicate;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 /**
@@ -34,6 +35,8 @@ public class Results {
         if (rootToFind.equals("")) return false;
         return file.getParent().startsWith(rootToFind);
     };
+
+    private Function<Integer, Integer> initCapacityFunc = size -> (int) (size * 0.7);
 
     public Results(ChunkManager chunkManager, Map<String, Set<File>> processedFilesMap) {
         this.processedFilesMap = processedFilesMap;
@@ -92,7 +95,7 @@ public class Results {
         updateTimeStamp.set(System.currentTimeMillis());
     }
     private void makeDuplicateSet() {
-        duplicateChSumSet = new HashSet<>();
+        duplicateChSumSet = new HashSet<>(initCapacityFunc.apply(processedFilesMap.size()));
         processedFilesMap.entrySet().stream().filter(entry -> entry.getValue().size() > 1).forEach(entry -> duplicateChSumSet.add(entry.getKey()));
     }
     protected synchronized void makeDuplicateSetByFileName(String fileNameStarts) {
@@ -105,7 +108,7 @@ public class Results {
             return file.getName().toLowerCase().contains(fileNameStarts.toLowerCase());
         };
 
-        duplicateChSumSet = new HashSet<>();
+        duplicateChSumSet = new HashSet<>(initCapacityFunc.apply(processedFilesMap.size()));
         processedFilesMap.entrySet().stream()
                 .filter(entry -> entry.getValue().size() > 1)
                 .filter(entry -> entry.getValue().stream().anyMatch(nameStartsWithPred))
@@ -128,7 +131,7 @@ public class Results {
         return duplicateChSumSet;
     }
     protected Set<File> getFilesThatRemains() {
-        Set<File> result = new HashSet<>();
+        Set<File> result = new HashSet<>(initCapacityFunc.apply(filesThatRemains.size()));
         Set<String> checksumsToUnselect = new HashSet<>();
         for (Map.Entry<File, String> entry : filesThatRemains.entrySet()) {
             if (entry.getKey().exists()) {
@@ -143,7 +146,7 @@ public class Results {
         return result;
     }
     protected Set<File> getFilesToDelete() {
-        Set<File> updatedSet = new HashSet<>();
+        Set<File> updatedSet = new HashSet<>(initCapacityFunc.apply(filesToDelete.size()));
         filesToDelete.stream().filter(File::exists).forEach(updatedSet::add);
         if (updatedSet.size() != filesToDelete.size()) {
             filesToDelete = new HashSet<>(updatedSet);
@@ -233,7 +236,7 @@ public class Results {
         massIgnore(byRootPredicate, rootString);
     }
     private void massIgnore(BiPredicate<File, String> ignoreCondition, String patternToFind) {
-        HashMap<File, String> filesWithChecksumsToIgnore = new HashMap<>();
+        HashMap<File, String> filesWithChecksumsToIgnore = new HashMap<>(processedFilesMap.size() * 2);
 
         for (String checksum : duplicateChSumSet) {
             for (File file : processedFilesMap.get(checksum)) {
