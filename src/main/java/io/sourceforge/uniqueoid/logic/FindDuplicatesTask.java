@@ -27,6 +27,7 @@ public class FindDuplicatesTask extends Task<Map<String, Set<File>>> {
     private Map<String, Set<File>> mapToReturn = new HashMap<>();
     private ConcurrentLinkedQueue<FileAndChecksum> queueProcessed = new ConcurrentLinkedQueue<>();
     private ConcurrentLinkedQueue<String> queueExMessages = new ConcurrentLinkedQueue<>();
+    private final Set<File> POSSIBLE_DUPLICATES = new HashSet<>();
     private ForkJoinPool fjPool;
     private Thread fjThread;
     private int filesCounter = 0;
@@ -82,10 +83,20 @@ public class FindDuplicatesTask extends Task<Map<String, Set<File>>> {
         }
         updateMessage(resProvider.getStrFromMessagesBundle("countFiles"));
         DIRECTORIES.forEach(dir -> filesTotal += countFiles(dir));
-        updateMessage(resProvider.getStrFromMessagesBundle("totalFiles") + filesTotal);
+        updateMessage(resProvider.getStrFromMessagesBundle("totalFiles") + filesTotal + "\n" +
+                      resProvider.getStrFromMessagesBundle("possibleDuplicates") + POSSIBLE_DUPLICATES.size());
     }
 
+
     public int countFiles(File dir) {
+        HashSet<File> initialSet = new HashSet<>();
+        if (!mapToReturn.isEmpty()) {
+            mapToReturn.forEach((s, files) -> initialSet.addAll(files));
+        }
+        return countFiles(dir, new HashMap<>());
+    }
+
+    public int countFiles(File dir, Map<Long, File> uniqueSizeFileMap) {
         if (dir == null || isCancelled() || Files.isSymbolicLink(dir.toPath())) return 0;
 
         if (dir.isDirectory()) {
@@ -96,10 +107,10 @@ public class FindDuplicatesTask extends Task<Map<String, Set<File>>> {
             } else {
                 for (File file : dir.listFiles()) {
                     if (file.isDirectory()) {
-                        result += countFiles(file);
+                        result += countFiles(file, uniqueSizeFileMap);
                     } else {
                         result++;
-                        byteTotal += file.length();
+                        filePreCheck(file, uniqueSizeFileMap);
                     }
                 }
             }
@@ -109,11 +120,26 @@ public class FindDuplicatesTask extends Task<Map<String, Set<File>>> {
         }
     }
 
+    private void filePreCheck(File file, Map<Long, File> uniqueSizeFileMap) {
+        long fileSize = file.length();
+        byteTotal += FIND_TASK_SETTINGS.isDisposable() ? 0 : fileSize;
+        File previousFile = uniqueSizeFileMap.put(fileSize, file);
+        if (previousFile != null) {
+            boolean newDupe = POSSIBLE_DUPLICATES.add(previousFile);
+            POSSIBLE_DUPLICATES.add(file);
+            if (FIND_TASK_SETTINGS.isDisposable()) {
+                if (newDupe) {
+                    byteTotal += fileSize * 2;
+                } else {
+                    byteTotal += fileSize;
+                }
+            }
+        }
+    }
+
     private void runTasksInNewThread() {
         fjThread = new Thread(() -> {
-            File[] files = new File[DIRECTORIES.size()];
-            files = DIRECTORIES.toArray(files);
-            DirectoryHandler directoryHandler = makeDirectoryHandler(files, FIND_TASK_SETTINGS, queueProcessed, queueExMessages);
+            DirectoryHandler directoryHandler = makeDirectoryHandler();
             fjPool.execute(directoryHandler);
             try {
                 directoryHandler.get();
@@ -126,8 +152,26 @@ public class FindDuplicatesTask extends Task<Map<String, Set<File>>> {
 
         fjThread.start();
     }
-    protected DirectoryHandler makeDirectoryHandler(File[] files, FindTaskSettings findTaskSettings, ConcurrentLinkedQueue<FileAndChecksum> queueProcessed, ConcurrentLinkedQueue<String> queueExMessages) {
-        return new DirectoryHandler(files, findTaskSettings, queueProcessed, queueExMessages);
+
+    protected DirectoryHandler makeDirectoryHandler() {
+        File[] files;
+        DirectoryHandler result;
+
+        if (FIND_TASK_SETTINGS.isDisposable()) {
+            files = new File[POSSIBLE_DUPLICATES.size()];
+            files = POSSIBLE_DUPLICATES.toArray(files);
+        } else {
+            files = new File[DIRECTORIES.size()];
+            files = DIRECTORIES.toArray(files);
+        }
+
+        if (FIND_TASK_SETTINGS.isParallel()) {
+            result = new DirectoryHandler(files, FIND_TASK_SETTINGS, queueProcessed, queueExMessages);
+        } else {
+            result = new DirectoryHandlerSoloThread(files, FIND_TASK_SETTINGS, queueProcessed, queueExMessages);
+        }
+
+        return result;
     }
 
     private void controlAndOutputResult() throws InterruptedException {

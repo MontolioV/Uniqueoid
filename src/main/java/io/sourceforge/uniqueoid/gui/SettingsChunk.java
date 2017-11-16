@@ -37,7 +37,7 @@ public class SettingsChunk extends AbstractGUIChunk{
     private Supplier<Long> bigFileSizeSupp;
     private Supplier<Integer> maxHashBufferSizeSupp;
 
-//    private ComboBox<String> algorithmCB;
+    private CheckBox isDisposableChBox = new CheckBox();
     private CheckBox isParallelChBox = new CheckBox();
     private Spinner<Integer> parallelismSpinner;
 
@@ -70,7 +70,7 @@ public class SettingsChunk extends AbstractGUIChunk{
      */
     @Override
     public void updateLocaleContent() {
-        algorithmLabel.setText(resProvider.getStrFromGUIBundle("algorithmLabel"));
+        isDisposableChBox.setText(resProvider.getStrFromGUIBundle("isDisposableChBox"));
         isParallelChBox.setText(resProvider.getStrFromGUIBundle("parallelismChBox"));
         bytePowers.forEach(BytePower::updateLocaleContent);
         fileSizeRestrictionsLabel.setText(resProvider.getStrFromGUIBundle("fileSizeRestrictions"));
@@ -130,10 +130,9 @@ public class SettingsChunk extends AbstractGUIChunk{
     }
 
     private Node makeAlgorithmAndParallelismSettingsNode() {
-//        algorithmCB = new ComboBox<>(FXCollections.observableArrayList(
-//                "MD5", "SHA-1", "SHA-256"));
-//        algorithmCB.getSelectionModel().select(findTaskSettings.getHashAlgorithm());
-//        algorithmCB.setMaxWidth(Double.MAX_VALUE);
+        isDisposableChBox.setSelected(findTaskSettings.isDisposable());
+        isDisposableChBox.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        HBox.setHgrow(isDisposableChBox, Priority.ALWAYS);
 
         isParallelChBox.setSelected(findTaskSettings.isParallel());
         isParallelChBox.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
@@ -144,8 +143,7 @@ public class SettingsChunk extends AbstractGUIChunk{
 
         HBox parallelHBox = new HBox(5, isParallelChBox, parallelismSpinner);
         VBox result = new VBox(5,
-//                algorithmLabel,
-//                algorithmCB,
+                isDisposableChBox,
                 parallelHBox);
         return result;
     }
@@ -228,11 +226,9 @@ public class SettingsChunk extends AbstractGUIChunk{
         return minMaxVBox;
     }
     private Node makeBottomNode() {
-
         saveButton.setOnAction(event -> {
             findTaskSettings = new FindTaskSettings(
-//                    algorithmCB.getSelectionModel().getSelectedItem(),
-                    null,
+                    isDisposableChBox.isSelected(),
                     isParallelChBox.isSelected(),
                     parallelismSpinner.getValue(),
                     bigFileSizeSupp.get(),

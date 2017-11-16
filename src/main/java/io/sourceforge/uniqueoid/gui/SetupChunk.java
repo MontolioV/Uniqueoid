@@ -3,7 +3,6 @@ package io.sourceforge.uniqueoid.gui;
 import io.sourceforge.uniqueoid.GlobalFiles;
 import io.sourceforge.uniqueoid.ResourcesProvider;
 import io.sourceforge.uniqueoid.logic.FindDuplicatesTask;
-import io.sourceforge.uniqueoid.logic.FindDuplicatesTaskSoloThread;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
@@ -201,18 +200,10 @@ public class SetupChunk extends AbstractGUIChunk {
     }
 
     protected FindDuplicatesTask getStartTask() {
-        if (chunkManager.getFindTaskSettings().isParallel()) {
-            return new FindDuplicatesTask(chosenFiles, chunkManager.getFindTaskSettings());
-        } else {
-            return new FindDuplicatesTaskSoloThread(chosenFiles, chunkManager.getFindTaskSettings());
-        }
+        return new FindDuplicatesTask(chosenFiles, chunkManager.getFindTaskSettings());
     }
     protected FindDuplicatesTask getAddToResultsTask(Map<String, Set<File>> previousResult) {
-        if (chunkManager.getFindTaskSettings().isParallel()) {
-            return new FindDuplicatesTask(chosenFiles, chunkManager.getFindTaskSettings(), previousResult);
-        } else {
-            return new FindDuplicatesTaskSoloThread(chosenFiles, chunkManager.getFindTaskSettings(), previousResult);
-        }
+        return new FindDuplicatesTask(chosenFiles, chunkManager.getFindTaskSettings(), previousResult);
     }
 
     private void showSelectedFile(File file) {

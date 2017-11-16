@@ -9,7 +9,7 @@ import java.io.Serializable;
  * <p>Created by MontolioV on 31.10.17.
  */
 public class FindTaskSettings implements Serializable{
-    private String hashAlgorithm;
+    private boolean isDisposable;
     private boolean isParallel;
     private int parallelism;
     private long bigFileSize;
@@ -18,7 +18,7 @@ public class FindTaskSettings implements Serializable{
     private long minFileSize;
 
     public FindTaskSettings() {
-        this.hashAlgorithm = "SHA-256";
+        this.isDisposable = false;
         this.isParallel = true;
         this.parallelism = Runtime.getRuntime().availableProcessors();
         this.bigFileSize = 10 * BytePower.MI_BYTES.getModifier();
@@ -27,19 +27,14 @@ public class FindTaskSettings implements Serializable{
         this.minFileSize = 0;
     }
 
-    public FindTaskSettings(String hashAlgorithm, boolean isParallel, int parallelism, long bigFileSize, int maxBufferSize, long maxFileSize, long minFileSize) {
-        this.hashAlgorithm = hashAlgorithm;
+    public FindTaskSettings(boolean isDisposable, boolean isParallel, int parallelism, long bigFileSize, int maxBufferSize, long maxFileSize, long minFileSize) {
+        this.isDisposable = isDisposable;
         this.isParallel = isParallel;
         this.parallelism = parallelism;
         this.bigFileSize = bigFileSize;
         this.maxBufferSize = maxBufferSize;
         this.maxFileSize = maxFileSize;
         this.minFileSize = minFileSize;
-    }
-
-    @Deprecated
-    public String getHashAlgorithm() {
-        return hashAlgorithm;
     }
 
     public boolean isParallel() {
@@ -73,5 +68,9 @@ public class FindTaskSettings implements Serializable{
         } else {
             return true;
         }
+    }
+
+    public boolean isDisposable() {
+        return isDisposable;
     }
 }
