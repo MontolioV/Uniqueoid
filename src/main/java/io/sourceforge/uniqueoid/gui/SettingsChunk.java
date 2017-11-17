@@ -94,12 +94,13 @@ public class SettingsChunk extends AbstractGUIChunk{
         try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(saveFile))) {
             findTaskSettings = (FindTaskSettings) ois.readObject();
         } catch (IOException | ClassNotFoundException e) {
-            e.printStackTrace();
+            chunkManager.showException(e);
             makeDefault();
         }
     }
     private void makeDefault() {
         findTaskSettings = new FindTaskSettings();
+        save();
     }
 
     protected FindTaskSettings getFindTaskSettings() {

@@ -122,6 +122,8 @@ public class FindDuplicatesTask extends Task<Map<String, Set<File>>> {
 
     private void filePreCheck(File file, Map<Long, File> uniqueSizeFileMap) {
         long fileSize = file.length();
+        if (fileSize == 0) return;
+
         byteTotal += FIND_TASK_SETTINGS.isDisposable() ? 0 : fileSize;
         File previousFile = uniqueSizeFileMap.put(fileSize, file);
         if (previousFile != null) {
@@ -140,13 +142,15 @@ public class FindDuplicatesTask extends Task<Map<String, Set<File>>> {
     private void runTasksInNewThread() {
         fjThread = new Thread(() -> {
             DirectoryHandler directoryHandler = makeDirectoryHandler();
-            fjPool.execute(directoryHandler);
             try {
+                fjPool.execute(directoryHandler);
                 directoryHandler.get();
                 DirectoryHandler.joinRunningTasks();
             } catch (Exception e) {
                 e.printStackTrace();
                 queueExMessages.offer(e.toString() + "\n");
+            }finally {
+                DirectoryHandler.clearTasks();
             }
         });
 

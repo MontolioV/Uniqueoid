@@ -152,12 +152,12 @@ public class DirectoryHandler extends RecursiveAction {
     }
 
     public static void joinRunningTasks() throws Exception{
-        try {
-            while (!runningTasks.isEmpty()) {
-                runningTasks.forEach(DirectoryHandler::join);
-            }
-        } finally {
-            runningTasks = Collections.newSetFromMap(new ConcurrentHashMap<>());
+        while (!runningTasks.isEmpty()) {
+            runningTasks.forEach(DirectoryHandler::join);
         }
+    }
+
+    public static void clearTasks() {
+        runningTasks = Collections.newSetFromMap(new ConcurrentHashMap<>());
     }
 }
