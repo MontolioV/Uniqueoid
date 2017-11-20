@@ -111,7 +111,7 @@ public class FindDuplicatesTaskTest {
     @Test(expected = CancellationException.class, timeout = 5000)
     public void cancel() throws Exception {
         //Task must be large
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < 10_000; i++) {
             dirList.add(new File(ROOT_CONTROL.getFile().getParent()));
         }
         FindDuplicatesTask task = makeFindDuplicatesTask(dirList, findTaskSettings);

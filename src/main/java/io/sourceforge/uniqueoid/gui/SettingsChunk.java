@@ -18,6 +18,8 @@ import java.io.*;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.text.ParseException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.function.ToDoubleFunction;
@@ -53,6 +55,7 @@ public class SettingsChunk extends AbstractGUIChunk{
     private Label maxBufferSizeLabel = new Label();
 
     private ObservableList<BytePower> bytePowers = FXCollections.observableArrayList(BytePower.values());
+    private List<ComboBox<BytePower>> updatebleCBs = new ArrayList<>();
 
     public SettingsChunk(ChunkManager chunkManager) {
         this.chunkManager = chunkManager;
@@ -73,6 +76,12 @@ public class SettingsChunk extends AbstractGUIChunk{
         isDisposableChBox.setText(resProvider.getStrFromGUIBundle("isDisposableChBox"));
         isParallelChBox.setText(resProvider.getStrFromGUIBundle("parallelismChBox"));
         bytePowers.forEach(BytePower::updateLocaleContent);
+        updatebleCBs.forEach(comboBox -> {
+            BytePower bp = comboBox.getSelectionModel().getSelectedItem();
+            comboBox.setItems(FXCollections.observableArrayList(BytePower.BYTES));
+            comboBox.setItems(bytePowers);
+            comboBox.getSelectionModel().select(bp);
+        });
         fileSizeRestrictionsLabel.setText(resProvider.getStrFromGUIBundle("fileSizeRestrictions"));
         minSizeLabel.setText(resProvider.getStrFromGUIBundle("minSizeLabel"));
         maxSizeLabel.setText(resProvider.getStrFromGUIBundle("maxSizeLabel"));
@@ -155,6 +164,8 @@ public class SettingsChunk extends AbstractGUIChunk{
         ComboBox<BytePower> maxBufferSizeCB = new ComboBox<>(bytePowers);
         TextField bigFileTF = new TextField();
         TextField maxBufferTF = new TextField();
+        updatebleCBs.add(bigFileSizeCB);
+        updatebleCBs.add(maxBufferSizeCB);
 
         Node bigFileSizeNode = makeByteInputElementsNode(bigFileTF, bigFileSizeCB, bigFileSizeLabel);
         Node maxBufferSizeNode = makeByteInputElementsNode(maxBufferTF, maxBufferSizeCB, maxBufferSizeLabel);
@@ -194,6 +205,8 @@ public class SettingsChunk extends AbstractGUIChunk{
         ComboBox<BytePower> maxMeasureCB = new ComboBox<>(bytePowers);
         TextField minSizeTF = new TextField();
         TextField maxSizeTF = new TextField();
+        updatebleCBs.add(minMeasureCB);
+        updatebleCBs.add(maxMeasureCB);
 
         Node minNode = makeByteInputElementsNode(minSizeTF, minMeasureCB, minSizeLabel);
         Node maxNode = makeByteInputElementsNode(maxSizeTF, maxMeasureCB, maxSizeLabel);
@@ -271,6 +284,8 @@ public class SettingsChunk extends AbstractGUIChunk{
     private void bindByteInputElements(TextField textFieldToBind, ComboBox<BytePower> comboBoxToBind, ToDoubleFunction<Double> limitFunc) {
         NumberFormat numberFormat = new DecimalFormat();
         Function<TextField, ChangeListener<BytePower>> comboBoxListenerProvider = textField -> (observable, oldValue, newValue) -> {
+            if (newValue == null || oldValue == null) return;
+
             try {
                 double tfValue = numberFormat.parse(textField.getText()).doubleValue();
                 textField.setText(String.format("%,f", tfValue * ((double) oldValue.getModifier() / newValue.getModifier())));
